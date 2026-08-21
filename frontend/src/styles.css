@@ -1,0 +1,259 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * TRAFFIC / XOTC-inspired cyberpunk design system.
+ * Acid lime on near-black, wide technical display type, clipped corners.
+ * All colors are oklch semantic tokens — never hardcode colors in components.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 6px);
+  --font-display: "Chakra Petch", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Chakra Petch", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-grid: var(--grid);
+  --color-ring-offset-background: var(--background);
+}
+
+:root {
+  --radius: 0.25rem;
+  --background: oklch(0.16 0.015 160);
+  --foreground: oklch(0.95 0.01 150);
+  --surface: oklch(0.2 0.018 162);
+  --surface-2: oklch(0.24 0.022 165);
+  --card: oklch(0.2 0.018 162);
+  --card-foreground: oklch(0.95 0.01 150);
+  --popover: oklch(0.2 0.018 162);
+  --popover-foreground: oklch(0.95 0.01 150);
+  --primary: oklch(0.89 0.23 128);
+  --primary-foreground: oklch(0.18 0.05 140);
+  --secondary: oklch(0.28 0.03 170);
+  --secondary-foreground: oklch(0.95 0.01 150);
+  --muted: oklch(0.26 0.02 168);
+  --muted-foreground: oklch(0.68 0.03 155);
+  --accent: oklch(0.72 0.15 195);
+  --accent-foreground: oklch(0.16 0.02 200);
+  --destructive: oklch(0.63 0.23 22);
+  --destructive-foreground: oklch(0.98 0.01 20);
+  --warning: oklch(0.8 0.16 78);
+  --warning-foreground: oklch(0.2 0.04 70);
+  --border: oklch(0.33 0.03 165);
+  --input: oklch(0.3 0.025 165);
+  --ring: oklch(0.89 0.23 128);
+  --grid: oklch(0.26 0.02 165 / 55%);
+  --glow-primary: 0 0 24px oklch(0.89 0.23 128 / 35%);
+  --gradient-scan: linear-gradient(
+    180deg,
+    oklch(0.89 0.23 128 / 0%) 0%,
+    oklch(0.89 0.23 128 / 22%) 50%,
+    oklch(0.89 0.23 128 / 0%) 100%
+  );
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+@layer base {
+  * {
+    /* hide default borders — UI remains but without visible lines */
+    border-color: transparent;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    /* use a darker background for the entire app and add subtle gradient shadows */
+    background-color: oklch(0.04 0.01 200);
+    background-image:
+      radial-gradient(800px 400px at 8% 12%, rgba(0,0,0,0.6), transparent 28%),
+      radial-gradient(700px 500px at 92% 88%, rgba(0,0,0,0.45), transparent 30%),
+      linear-gradient(180deg, rgba(0,0,0,0.06), rgba(0,0,0,0.02));
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    scroll-behavior: smooth;
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    font-weight: 700;
+  }
+
+  ::selection {
+    background: var(--color-primary);
+    color: var(--color-primary-foreground);
+  }
+}
+
+/* Clipped "tech panel" corners */
+@utility clip-tech {
+  clip-path: polygon(
+    22px 0,
+    100% 0,
+    100% calc(100% - 22px),
+    calc(100% - 22px) 100%,
+    0 100%,
+    0 22px
+  );
+}
+
+@utility clip-tag {
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  /* subtle colored shadow using OKLCH primary hue */
+  box-shadow: 0 12px 30px oklch(0.89 0.23 128 / 24%);
+}
+
+@utility panel {
+  background-color: var(--color-surface);
+  /* subtle border to restore visual hierarchy */
+  border: 1px solid rgba(255,255,255,0.04);
+  clip-path: polygon(
+    22px 0,
+    100% 0,
+    100% calc(100% - 22px),
+    calc(100% - 22px) 100%,
+    0 100%,
+    0 22px
+  );
+}
+
+/* Docs-style nav + section animations */
+nav a {
+  transition: transform 160ms ease, color 160ms ease, background-color 160ms ease;
+}
+
+nav a:hover {
+  transform: translateX(6px);
+}
+
+nav a[aria-current='true'], nav a.active {
+  color: var(--color-primary);
+  background-color: rgba(255,255,255,0.02);
+  border-left: 3px solid var(--color-primary);
+  padding-left: calc(0.5rem - 3px);
+}
+
+main.prose > * {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 260ms ease, transform 260ms ease;
+}
+
+/* keep common content visible */
+main.prose > *:is(h1,h2,h3,p,ol,ul,blockquote,section) {
+  opacity: 1;
+  transform: none;
+}
+
+/* ensure sticky header is visible */
+main.prose > .sticky {
+  opacity: 1;
+  transform: none;
+}
+
+/* Improve vertical rhythm for docs content */
+main.prose section {
+  padding-top: 1rem;
+  margin-bottom: 2rem;
+}
+
+main.prose p,
+main.prose ul,
+main.prose ol {
+  margin-top: 0.6rem;
+  margin-bottom: 0.8rem;
+  line-height: 1.6;
+}
+
+@utility label-tech {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-muted-foreground);
+}
+
+@utility glow {
+  box-shadow: var(--glow-primary);
+}
+
+@utility text-stroke-primary {
+  -webkit-text-stroke: 1px var(--color-primary);
+  color: transparent;
+}
+
+@keyframes scan {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(400%);
+  }
+}
+
+@utility scanline {
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    height: 40%;
+    background: var(--gradient-scan);
+    animation: scan 5s linear infinite;
+    pointer-events: none;
+  }
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@utility live-dot {
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
