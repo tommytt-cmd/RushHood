@@ -75,7 +75,7 @@ export function LiveStream({
   const [displayCount, setDisplayCount] = useState(0);
   const lastSyncedTimeRef = useRef<number>(-1);
   
-  const showVideo = phase === "live" && videoUrl;
+  const showVideo = phase === "live" || phase === "settle";
   console.log(`LiveStream: phase=${phase}, showVideo=${showVideo}, playbackTime=${playbackTime}, videoUrl=${videoUrl}`);
 
   // Reset counter to 0 when leaving live phase
