@@ -6,8 +6,8 @@ import { formatTokenAmount } from "./utils";
 // Keep the frontend ABI coupled to the Foundry artifact that is deployed.  The
 // previous aliases pointed at files that were never checked into `src`, which
 // made every production build fail before a wallet could connect.
-import RushBettingArtifact from "../../../../contract/out/RushBetting.sol/RushBetting.json";
-import RushHolderVaultArtifact from "../../../../contract/out/RushHolderVault.sol/RushHolderVault.json";
+import RushBettingArtifact from "./RushBetting.json";
+import RushHolderVaultArtifact from "./RushHolderVault.json";
 
 function getBettingContractConfig() {
   const address = import.meta.env["VITE_BETTING_CONTRACT_ADDRESS"] as string | undefined;
