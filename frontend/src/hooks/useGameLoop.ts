@@ -62,6 +62,13 @@ function mapPhase(status: string): GamePhase {
   return 'betting';
 }
 
+const phaseOrder: Record<GamePhase, number> = {
+  betting: 0,
+  locked: 1,
+  live: 2,
+  settle: 3,
+};
+
 function parseTimestamp(value: string | null | undefined): number | null {
   if (!value) return null;
   const parsed = Date.parse(value);
@@ -82,9 +89,11 @@ export function useGameLoop(): LoopSnapshot {
   const [playbackTime, setPlaybackTime] = useState(0);
   const [vehicleCount, setVehicleCount] = useState(0);
   const [timelineEvents, setTimelineEvents] = useState<{timestamp_ms: number; cumulative_count: number}[]>([]);
+  const [verifiedSettlementRoundId, setVerifiedSettlementRoundId] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
   const settledRoundRef = useRef<number | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
+  const activeRoundIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(Date.now()), 1000);
@@ -126,7 +135,14 @@ export function useGameLoop(): LoopSnapshot {
         const nextRoom: RoundResponse = await response.json();
         console.log(nextRoom);
         setRoom(nextRoom);
-        setPhase(mapPhase(nextRoom.status));
+        const nextPhase = mapPhase(nextRoom.status);
+        activeRoundIdRef.current = nextRoom.round.id;
+        setPhase(nextPhase);
+        setVerifiedSettlementRoundId(
+          nextPhase === 'settle' && typeof nextRoom.round.result === 'number'
+            ? nextRoom.round.id
+            : null,
+        );
         if (nextRoom.video_url) {
           setVideoUrl(toAbsoluteUrl(nextRoom.video_url));
         }
@@ -150,6 +166,8 @@ export function useGameLoop(): LoopSnapshot {
           const payload = (raw.payload && typeof raw.payload === 'object' ? raw.payload : raw) as Record<string, unknown>;
 
           if (eventName === 'round_started') {
+            const nextRoundId = typeof payload.round_id === 'string' ? payload.round_id : null;
+            if (nextRoundId) activeRoundIdRef.current = nextRoundId;
             setRoom((current) => {
               if (!current) return current;
               return {
@@ -157,8 +175,13 @@ export function useGameLoop(): LoopSnapshot {
                 status: 'OPEN',
                 round: {
                   ...current.round,
+                  // The scheduler has started a new round. Keeping the previous
+                  // id/result here made the settlement screen briefly render the
+                  // prior round's result while the new result was still pending.
+                  id: nextRoundId ?? current.round.id,
                   status: 'OPEN',
                   round_number: payload.round_number,
+                  result: null,
                   starts_at: typeof payload.starts_at === 'string' ? payload.starts_at : current.round.starts_at,
                   betting_closes_at: typeof payload.betting_closes_at === 'string' ? payload.betting_closes_at : current.round.betting_closes_at,
                   locked_ends_at: typeof payload.locked_ends_at === 'string' ? payload.locked_ends_at : current.round.betting_closes_at,
@@ -174,11 +197,14 @@ export function useGameLoop(): LoopSnapshot {
             setPlaybackTime(0);
             setVehicleCount(0);
             setTimelineEvents([]);
+            setVerifiedSettlementRoundId(null);
             setPhase('betting');
             return;
           }
 
           if (eventName === 'round_locked') {
+            // WebSocket messages can arrive after the local clock (or a replay
+            // event) has already advanced the same round. Never regress a phase.
             setRoom((current) => {
               if (!current) return current;
               return {
@@ -190,9 +216,10 @@ export function useGameLoop(): LoopSnapshot {
                 },
               };
             });
-            setVideoUrl('');
             setPlaybackTime(0);
-            setPhase('locked');
+            setPhase((currentPhase) => (
+              phaseOrder[currentPhase] > phaseOrder.locked ? currentPhase : 'locked'
+            ));
             return;
           }
 
@@ -249,6 +276,10 @@ export function useGameLoop(): LoopSnapshot {
           }
 
           if (eventName === 'round_settled') {
+            const eventRoundId = typeof payload.round_id === 'string' ? payload.round_id : null;
+            // Settlement broadcasts may be repeated. Only accept one for the
+            // currently displayed round; an old broadcast must not overwrite it.
+            if (!eventRoundId || eventRoundId !== activeRoundIdRef.current) return;
             setRoom((current) => {
               if (!current) return current;
               const result = typeof payload.result === 'number' ? payload.result : current.round.result;
@@ -264,6 +295,7 @@ export function useGameLoop(): LoopSnapshot {
             });
             if (typeof payload.result === 'number') {
               setVehicleCount(payload.result);
+              setVerifiedSettlementRoundId(eventRoundId);
             }
             setVideoUrl('');
             setPlaybackTime(0);
@@ -272,6 +304,8 @@ export function useGameLoop(): LoopSnapshot {
           }
           
           if (eventName === 'round_finished') {
+            const eventRoundId = typeof payload.round_id === 'string' ? payload.round_id : null;
+            if (!eventRoundId || eventRoundId !== activeRoundIdRef.current) return;
             setVideoUrl('');
             setPlaybackTime(0);
             setPhase('settle');
@@ -347,8 +381,13 @@ export function useGameLoop(): LoopSnapshot {
   }, [phase, room?.round.id, room?.round.result]);
 
   const roundTimestamps: number[] = timelineEvents.map((event) => event.timestamp_ms);
-  const finalCount = room?.round.result ?? 0;
+  const finalCount = room?.round.result;
+  // A local clock can enter the settle window a moment before the backend has
+  // submitted the result. Do not substitute 0 (or a previous round's value).
   const lastWinner = phase === 'settle'
+    && verifiedSettlementRoundId === room?.round.id
+    && typeof finalCount === 'number'
+    && Number.isFinite(finalCount)
     ? { side: (finalCount > Number(room.threshold) ? 'OVER' : 'UNDER') as Side, finalCount, line: Number(room.threshold) }
     : null;
 

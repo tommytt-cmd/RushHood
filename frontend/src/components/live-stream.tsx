@@ -128,6 +128,12 @@ export function LiveStream({
     }
   }, [showVideo, playbackTime, videoUrl]);
 
+  useEffect(() => {
+    // A new URL must be treated as a new media resource; retaining the old
+    // sync marker can otherwise skip its initial seek/play.
+    lastSyncedTimeRef.current = -1;
+  }, [videoUrl]);
+
 
 
   const sortedTimeline = useMemo(() => {
@@ -142,7 +148,7 @@ export function LiveStream({
             showVideo ? "opacity-100 block" : "opacity-0 invisible h-0 w-0 absolute"
           }`}
           ref={videoRef}
-          src={videoUrl || undefined}
+          key={videoUrl}
           muted
           playsInline
           aria-label={locationName}
@@ -151,6 +157,14 @@ export function LiveStream({
           disablePictureInPicture
           onLoadedMetadata={() => {
             if (videoRef.current) seekVideoToTime(videoRef.current, playbackTime);
+          }}
+          onError={(event) => {
+            const mediaError = event.currentTarget.error;
+            console.error('Unable to load livestream source:', {
+              url: event.currentTarget.currentSrc || videoUrl,
+              code: mediaError?.code,
+              message: mediaError?.message,
+            });
           }}
           onTimeUpdate={(event) => {
             const currentMs = Math.round(event.currentTarget.currentTime * 1000);
@@ -167,7 +181,9 @@ export function LiveStream({
               setDisplayCount(newCount);
             }
           }}
-        />
+        >
+          {videoUrl && <source src={videoUrl} type="video/mp4" />}
+        </video>
 
         {/* Feed label */}
         <div className="absolute left-3 top-3 flex items-center gap-2 bg-background/70 px-2 py-1 font-mono text-[0.625rem] uppercase tracking-[0.18em] text-muted-foreground backdrop-blur">
@@ -208,15 +224,21 @@ export function LiveStream({
         )}
 
         {/* SETTLING: result */}
-        {phase === "settle" && settleData?.finalCount !== null && (
+        {phase === "settle" && settleData && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/85 text-center backdrop-blur-sm">
             <p className="label-tech">Final count verified</p>
             <p className="font-display text-6xl font-bold tabular-nums text-foreground sm:text-7xl">
-              {settleData?.finalCount.toLocaleString()}
+              {settleData.finalCount.toLocaleString()}
             </p>
             <p className="clip-tag mt-2 bg-primary px-4 py-1.5 font-display text-sm font-bold uppercase tracking-[0.16em] text-primary-foreground">
-              {settleData?.side} {threshold} wins
+              {settleData.side} {threshold} wins
             </p>
+          </div>
+        )}
+        {phase === "settle" && !settleData && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/85 text-center backdrop-blur-sm">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="label-tech text-primary">Verifying final count</p>
           </div>
         )}
       </div>
