@@ -47,36 +47,40 @@ export function PhaseStatus({ phase, remaining, totalForPhase }: { phase: GamePh
   return (
     <div className={cn("clip-tag border p-4", s.wrap)}>
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className={cn("shrink-0", s.text)}>
-            <Icon className="h-5 w-5" />
-          </span>
-          <div className="min-w-0">
-            <p className="flex items-center gap-2">
-              <span className={cn("live-dot h-2 w-2 shrink-0 rounded-full", s.dot)} />
-              <span
-                className={cn(
-                  "truncate font-display text-base font-bold uppercase tracking-[0.14em]",
-                  s.text,
-                )}
-              >
-                {PHASE_COPY[phase].label}
-              </span>
-            </p>
-            <p className="mt-1 truncate text-xs text-muted-foreground">{PHASE_COPY[phase].blurb}</p>
+        <div className="min-w-0 items-center gap-3">
+          <div className="flex">
+            <span className={cn("shrink-0", s.text)}>
+              <Icon className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="flex items-center gap-2">
+                <span className={cn("live-dot h-2 w-2 shrink-0 rounded-full", s.dot)} />
+                <span
+                  className={cn(
+                    "truncate font-display text-base font-bold uppercase tracking-[0.14em]",
+                    s.text,
+                  )}
+                >
+                  {PHASE_COPY[phase].label}
+                </span>
+              </p>
+              {/*<p className="mt-1 truncate text-xs text-muted-foreground">{PHASE_COPY[phase].blurb}</p>*/}
+            </div>
+          </div>
+          <div className="mt-4 h-1 w-full bg-secondary">
+            <div
+              className={cn("h-full transition-[width] duration-1000 ease-linear", s.bar)}
+              style={{ width: `${Math.min(100, Math.max(0, progress * 100))}%` }}
+            />
           </div>
         </div>
+        
         <div className="shrink-0 text-right">
           <p className="label-tech">Next phase</p>
           <p className={cn("font-mono text-2xl", s.text)}>{formatCountdown(remaining)}</p>
         </div>
       </div>
-      <div className="mt-4 h-1 w-full bg-secondary">
-        <div
-          className={cn("h-full transition-[width] duration-1000 ease-linear", s.bar)}
-          style={{ width: `${Math.min(100, Math.max(0, progress * 100))}%` }}
-        />
-      </div>
+      
     </div>
   );
 }

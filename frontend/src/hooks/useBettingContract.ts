@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { Address } from "viem";
 import { formatTokenAmount, parseTokenAmount } from "@/services/blockchain/utils";
 import { BettingContractService } from "@/services/blockchain/bettingContractService";
 import { useWallet } from "@/hooks/useWallet";
@@ -183,6 +184,11 @@ export function useBettingContract(roundNumberOverride?: number) {
     return BettingContractService.claimEth(wallet.signer, roundNumber);
   }, [wallet.signer]);
 
+  const claimStock = useCallback(async (roundNumber: number, token: string) => {
+    if (!wallet.signer) throw new Error("No wallet signer available");
+    return BettingContractService.claimStock(wallet.signer, roundNumber, token as Address);
+  }, [wallet.signer]);
+
   const claimRushRewardStake = useCallback(async (roundNumber: number) => {
     if (!wallet.signer || !provider) {
       throw new Error("Wallet signer and network provider are required to claim RUSH.");
@@ -238,8 +244,9 @@ export function useBettingContract(roundNumberOverride?: number) {
       readClaimState,
       placeBet,
       claimEth,
+      claimStock,
       claimRushRewardStake,
     }),
-    [state, readPool, readUserBet, readClaimState, placeBet, claimEth, claimRushRewardStake],
+    [state, readPool, readUserBet, readClaimState, placeBet, claimEth, claimStock, claimRushRewardStake],
   );
 }

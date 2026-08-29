@@ -53,9 +53,9 @@ const LiveCounterOverlay = memo(function LiveCounterOverlay({
   }, [count]);
 
   return (
-    <div className="clip-tag absolute right-3 top-3 border border-primary/60 bg-background/75 px-3 py-2 text-right backdrop-blur">
+    <div className="clip-tag absolute right-0 top-0 border border-primary/60 bg-background/75 px-3 py-2 text-right backdrop-blur">
       <p className="label-tech text-primary">Vehicles</p>
-      <p className={`font-display text-3xl font-bold tabular-nums text-primary sm:text-4xl ${pop ? 'animate-pop-scale' : ''}`}>
+      <p className={`font-display text-3xl font-bold tabular-nums text-primary sm:text-2xl ${pop ? 'animate-pop-scale' : ''}`}>
         {count}
       </p>
     </div>
@@ -186,7 +186,7 @@ export function LiveStream({
         </video>
 
         {/* Feed label */}
-        <div className="absolute left-3 top-3 flex items-center gap-2 bg-background/70 px-2 py-1 font-mono text-[0.625rem] uppercase tracking-[0.18em] text-muted-foreground backdrop-blur">
+        <div className="clip-tag absolute left-2 top-0 flex items-center gap-2 border border-primary/60 bg-background/70 px-2 py-1 font-mono text-[0.625rem] uppercase tracking-[0.18em] text-muted-foreground backdrop-blur">
           {locationName}
         </div>
 
