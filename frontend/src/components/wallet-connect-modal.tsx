@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   WalletCoinbase,
   WalletMetamask,
+  WalletRainbow,
   WalletWalletConnect,
 } from "@web3icons/react";
 
@@ -33,37 +34,48 @@ interface WalletMeta {
 }
 
 const META: Record<string, WalletMeta> = {
-  "io.rainbow": { label: "Rainbow", blurb: "Open in Rainbow app", accent: "#1b2c5a", glyph: "R" },
-  rainbow: { label: "Rainbow", blurb: "Open in Rainbow app", accent: "#1b2c5a", glyph: "R" },
+  "io.rainbow": { 
+    label: "Rainbow", 
+    blurb: "Open in Rainbow app", 
+    accent: "#1b2c5a", 
+    glyph: "R",
+    icon: <WalletRainbow  size={30} variant="branded" />
+  },
+  rainbow: { 
+    label: "Rainbow",
+     blurb: "Open in Rainbow app", 
+     accent: "#1b2c5a", 
+     glyph: "R",
+     icon: <WalletRainbow  size={30} variant="branded" /> 
+    },
   walletConnect: {
     label: "WalletConnect",
     blurb: "Rainbow, Trust, and 300+ wallets",
     accent: "#1d7cf2",
     glyph: "◉",
-    icon: <WalletWalletConnect size={28} variant="branded" />,
+    icon: <WalletWalletConnect size={30} variant="branded" />,
   },
   coinbaseWalletSDK: {
     label: "Coinbase Wallet",
     blurb: "Open in Coinbase Wallet app",
     accent: "#0052ff",
     glyph: "◍",
-    icon: <WalletCoinbase size={28} variant="branded" />,
+    icon: <WalletCoinbase size={30} variant="branded" />,
   },
   "io.metamask": {
     label: "MetaMask",
     blurb: "Open in MetaMask app",
     accent: "#3a1e0d",
     glyph: "M",
-    icon: <WalletMetamask size={28} variant="branded" />,
+    icon: <WalletMetamask size={30} variant="branded" />,
   },
   metaMask: {
     label: "MetaMask",
     blurb: "Open in MetaMask app",
     accent: "#3a1e0d",
     glyph: "M",
-    icon: <WalletMetamask size={28} variant="branded" />,
+    icon: <WalletMetamask size={30} variant="branded" />,
   },
-  injected: { label: "Browser Wallet", blurb: "Use your installed extension", accent: "#1f2a26", glyph: "◆" },
 };
 
 function metaFor(connector: Connector) {

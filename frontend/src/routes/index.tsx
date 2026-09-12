@@ -44,6 +44,19 @@ function Index() {
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
+  const supportedStocksQuery = useQuery({
+    queryKey: ["supported-stocks"],
+    queryFn: async () => {
+      const response = await fetch(
+        `${import.meta.env["VITE_GAME_API_URL"] ?? "http://localhost:8000"}/api/stocks/supported`,
+        { cache: "no-store" },
+      );
+      if (!response.ok) throw new Error("Unable to load supported stocks");
+      return response.json() as Promise<Array<{ address: string; symbol: string; name: string | null }>>;
+    },
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+  });
 
   const settledRoundNumberRef = useRef<number | null>(null);
   const previousRoundNumberRef = useRef<number>(loop.roundNumber);
@@ -75,7 +88,8 @@ function Index() {
           </h1>
           <p className="mt-4 max-w-md text-sm text-muted-foreground">
             Place under/over stakes on verified junction vehicle counts. Rounds are settled
-            deterministically against camera-verified data and on-chain rules.
+            against the submitted result and on-chain rules. Winning positions receive a pro-rata
+            share of the stock tokens bought for their market.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <a
@@ -90,6 +104,28 @@ function Index() {
             >
               How it works
             </Link>
+          </div>
+          <div className="mt-6 max-w-2xl">
+            <p className="label-tech">Supported stock rewards</p>
+            {supportedStocksQuery.isLoading ? (
+              <p className="mt-2 text-sm text-muted-foreground">Loading supported stocks…</p>
+            ) : supportedStocksQuery.data && supportedStocksQuery.data.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {supportedStocksQuery.data.map((stock) => (
+                  <span
+                    key={stock.address}
+                    title={stock.name ?? stock.symbol}
+                    className="clip-tag border border-primary/40 bg-primary/10 px-3 py-1.5 font-mono text-xs text-primary"
+                  >
+                    {stock.symbol}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2 text-sm text-muted-foreground">
+                Supported stock rewards will appear here once they are available.
+              </p>
+            )}
           </div>
         </div>
       </section>

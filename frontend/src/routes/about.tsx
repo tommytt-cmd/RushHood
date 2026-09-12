@@ -4,6 +4,15 @@ import React from "react";
 // hero image removed for production copy
 import { Panel, SectionHeading } from "@/components/panel";
 import { AlertTriangle } from "lucide-react";
+import { DEFAULT_EXPLORER_URL } from "@/services/blockchain/constants";
+
+const deployedAddresses = [
+  { label: "RUSH token", address: import.meta.env.VITE_RUSH_TOKEN_ADDRESS as string | undefined },
+  { label: "Prediction market", address: import.meta.env.VITE_BETTING_CONTRACT_ADDRESS as string | undefined },
+  { label: "Protocol treasury", address: import.meta.env.VITE_RUSH_TREASURY_ADDRESS as string | undefined },
+  { label: "Stock treasury", address: import.meta.env.VITE_STOCK_TREASURY_ADDRESS as string | undefined },
+  { label: "Reward vault", address: import.meta.env.VITE_STOCK_VAULT as string | undefined },
+].filter((deployment): deployment is { label: string; address: string } => Boolean(deployment.address));
 
 export const Route = createFileRoute("/about")({
   head: () => ({
@@ -40,7 +49,7 @@ function About() {
   const titles: Record<string, string> = {
     overview: 'Overview',
     'how-it-works': 'How it works',
-    utility: 'Token & utility',
+    utility: 'Tokenomics',
     participate: 'How to participate',
     'data-and-settlement': 'Data & settlement',
     security: 'Security & audits',
@@ -87,7 +96,7 @@ function About() {
             {[
               ['overview', 'Overview'],
               ['how-it-works', 'How it works'],
-              ['utility', 'Token & utility'],
+              ['utility', 'Tokenomics'],
               ['participate', 'Participate'],
               ['data-and-settlement', 'Data & settlement'],
               ['security', 'Security'],
@@ -161,14 +170,34 @@ function About() {
           </section>
 
           <section id="utility">
-            <SectionHeading eyebrow="Token" title="Token & utility" />
+            <SectionHeading eyebrow="Token" title="Tokenomics" />
             <p>
-              RUSH is the protocol token used by the treasury's buyback mechanism. A configurable
-              portion of each protocol fee is sent to the protocol treasury, where settlement fees
-              are used to buy RUSH. Current treasury settings determine whether acquired RUSH is
-              burned and/or directed to staking. These settings are controlled by the protocol
-              operator and are not a promise of yield or governance rights.
+              RUSH is the protocol token used by the treasury's buyback mechanism. In this version,
+              RUSH bought with settlement-fee funds is burned. No settlement-fee RUSH is directed
+              to staking in the current release; a staking allocation is planned for a future
+              version. This is not a promise of yield or governance rights.
             </p>
+            {deployedAddresses.length > 0 && (
+              <div className="mt-5 rounded-md border border-border bg-surface-2/40 p-4">
+                <p className="label-tech">Verify deployed addresses</p>
+                <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+                  {deployedAddresses.map(({ label, address }) => (
+                    <li key={label} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span>{label}:</span>
+                      <a
+                        href={`${DEFAULT_EXPLORER_URL}/address/${address}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-mono text-primary underline-offset-4 hover:underline"
+                      >
+                        {address}
+                      </a>
+                      <span className="text-xs">Robinhood Blockscout ↗</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </section>
 
           <section id="participate">
