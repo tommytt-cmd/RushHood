@@ -1,430 +1,100 @@
-import { useEffect, useState } from "react";
-import type { Address } from "viem";
-import { formatUnits } from "viem";
+import { useCallback, useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Wallet as WalletIcon, LogOut } from "lucide-react";
+import { formatUnits, type Address } from "viem";
+import { Copy, LogOut, Wallet as WalletIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Panel, SectionHeading } from "@/components/panel";
+import { useWallet } from "@/hooks/useWallet";
 import { shortAddress } from "@/lib/round";
-import { useWallet as useBlockchainWallet } from "@/hooks/useWallet";
-import { useBettingContract } from "@/hooks/useBettingContract";
 import { BettingContractService } from "@/services/blockchain/bettingContractService";
-// Claim-related UI and transaction helpers removed
-import { walletStore } from "@/lib/store";
+import { DEFAULT_EXPLORER_URL } from "@/services/blockchain/constants";
 
-const ticker = import.meta.env["TICKER"] ?? 'ETH';
+type TokenReward = { token: Address; symbol: string; decimals: number; entitled: bigint; alreadyClaimed: bigint; claimable: bigint };
+type RewardRound = { roundNumber: bigint; contribution: bigint; entitled: bigint; gross: bigint; claimed: boolean; created: boolean; finalized: boolean; settled: boolean; winningSide: string; tokens: TokenReward[] };
+type Bet = { roundNumber: bigint; side: string; amount: bigint };
+type ClaimState = "preparing" | "confirming" | "pending";
 
-export const Route = createFileRoute("/wallet")({
-  head: () => ({
-    meta: [
-      { title: "Wallet — TRAFFIC Credits and Positions" },
-      {
-        name: "description",
-        content:
-          "Connect a wallet, manage TRAFFIC credits and review your under/over positions across settled vehicle-count rounds.",
-      },
-      { property: "og:title", content: "Wallet — TRAFFIC Credits and Positions" },
-      {
-        property: "og:description",
-        content: "Manage credits and track your under/over positions on live traffic rounds.",
-      },
-    ],
-  }),
-  component: WalletPage,
-});
+const erc20MetadataAbi = [
+  { type: "function", name: "symbol", stateMutability: "view", inputs: [], outputs: [{ type: "string" }] },
+  { type: "function", name: "decimals", stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] },
+] as const;
 
-const PROVIDERS = ["MetaMask", "Coinbase Wallet", "Browser Wallet", "WalletConnect"] as const;
+export const Route = createFileRoute("/wallet")({ head: () => ({ meta: [{ title: "Wallet — TRAFFIC" }] }), component: WalletPage });
 
 function WalletPage() {
-  const wallet = useBlockchainWallet();
-  const betting = useBettingContract();
-  const [amount, setAmount] = useState(0.1);
-  const [betHistory, setBetHistory] = useState<Array<{ roundNumber: bigint; side: string; amount: string; active: boolean }>>([]);
-  const [claimableWins, setClaimableWins] = useState<Array<{ roundNumber: bigint; gross: string; claimed: boolean }>>([]);
-  
-  const [holderShares, setHolderShares] = useState("0");
-  const [pendingHolderRewards, setPendingHolderRewards] = useState("0");
-  const [holderVaultAddress, setHolderVaultAddress] = useState<Address | null>(null);
-  const [claimingHolderRewards, setClaimingHolderRewards] = useState(false);
-  const [withdrawableRush, setWithdrawableRush] = useState("0");
-  const [withdrawingRush, setWithdrawingRush] = useState(false);
+  const wallet = useWallet();
+  const [bets, setBets] = useState<Bet[]>([]);
+  const [rewards, setRewards] = useState<RewardRound[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [claiming, setClaiming] = useState<Record<string, ClaimState>>({});
 
-  useEffect(() => {
-    // claim state reads removed
-  }, [wallet.connected, wallet.provider, wallet.address]);
-
-  // claim gas estimation removed
-
-  useEffect(() => {
-    if (!wallet.provider || !wallet.address) return;
-    void BettingContractService.getHolderPosition(wallet.provider, wallet.address as Address)
-      .then((position) => {
-        setHolderVaultAddress(position.holderVaultAddress ?? null);
-        setHolderShares(formatUnits(position.shares, 18));
-        setPendingHolderRewards(formatUnits(position.pendingRewards, 18));
-        setWithdrawableRush(formatUnits(position.netAmount, 18));
-      })
-      .catch(() => {
-        setHolderVaultAddress(null);
-        setHolderShares("0");
-        setPendingHolderRewards("0");
-        setWithdrawableRush("0");
-      });
-  }, [wallet.provider, wallet.address]);
-
-  useEffect(() => {
-    if (!wallet.provider || !wallet.address) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const raw = await BettingContractService.getBetHistory(wallet.provider, wallet.address as Address, 50);
-        if (cancelled) return;
-
-        // Enrich each bet with `active` flag by querying round info
-        const enriched = await Promise.all(raw.map(async (r) => {
-          try {
-            const roundInfo: any = await wallet.provider!.readContract({
-              address: import.meta.env["VITE_BETTING_CONTRACT_ADDRESS"] as Address,
-              abi: (await import("@/services/blockchain/RushBetting.json")).abi,
-              functionName: "getRoundInfo",
-              args: [r.roundNumber],
-            });
-            const settled = Boolean(roundInfo?.settled);
-            return { roundNumber: r.roundNumber, side: r.side, amount: formatUnits(r.amount, 18), active: !settled };
-          } catch (err) {
-            return { roundNumber: r.roundNumber, side: r.side, amount: formatUnits(r.amount, 18), active: false };
-          }
-        }));
-
-        if (cancelled) return;
-        setBetHistory(enriched);
-
-        // Also fetch claimable wins to render claim buttons for settled rounds
-        const claims = await BettingContractService.getRushRewardHistory(wallet.provider, wallet.address as Address, 50);
-        if (cancelled) return;
-        setClaimableWins(claims.map((c) => ({ roundNumber: c.roundNumber, gross: formatUnits(c.gross, 18), claimed: c.claimed })));
-      } catch (error) {
-        console.debug("[WalletPage] getBetHistory failed", error);
-        if (!cancelled) {
-          setBetHistory([]);
-          setClaimableWins([]);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [wallet.provider, wallet.address]);
-
-  async function handleClaimHolderRewards() {
-    if (!wallet.signer || !holderVaultAddress) return;
-    setClaimingHolderRewards(true);
+  const refresh = useCallback(async () => {
+    if (!wallet.provider || !wallet.address) { setBets([]); setRewards([]); return; }
+    setLoading(true); setError(null);
     try {
-      const txHash = await BettingContractService.claimHolderRewards(wallet.signer, holderVaultAddress);
-      await wallet.provider?.waitForTransactionReceipt({ hash: txHash });
-      toast.success("Holder rewards claimed.");
-      if (wallet.provider && wallet.address) {
-        const position = await BettingContractService.getHolderPosition(wallet.provider, wallet.address as Address);
-        setHolderShares(formatUnits(position.shares, 18));
-        setPendingHolderRewards(formatUnits(position.pendingRewards, 18));
-        setWithdrawableRush(formatUnits(position.netAmount, 18));
-      }
-    } catch (error) {
-      toast.error((error as Error).message || "Unable to claim holder rewards.");
-    } finally {
-      setClaimingHolderRewards(false);
-    }
+      const [history, rawRewards] = await Promise.all([
+        BettingContractService.getBetHistory(wallet.provider, wallet.address as Address, 75),
+        BettingContractService.getStockRewardHistory(wallet.provider, wallet.address as Address, 75),
+      ]);
+      const enriched = await Promise.all((rawRewards as RewardRound[]).map(async (round) => ({
+        ...round,
+        tokens: await Promise.all(round.tokens.map(async (token) => {
+          const [symbol, decimals] = await Promise.all([
+            wallet.provider!.readContract({ address: token.token, abi: erc20MetadataAbi, functionName: "symbol" }).catch(() => shortAddress(token.token)),
+            wallet.provider!.readContract({ address: token.token, abi: erc20MetadataAbi, functionName: "decimals" }).catch(() => 18),
+          ]);
+          return { ...token, symbol: String(symbol), decimals: Number(decimals) };
+        })),
+      })));
+      setBets(history); setRewards(enriched);
+    } catch (caught) { setError((caught as Error).message || "Unable to load wallet activity."); }
+    finally { setLoading(false); }
+  }, [wallet.address, wallet.provider]);
+
+  useEffect(() => { void refresh(); }, [refresh]);
+
+  async function claim(roundId: bigint, token: TokenReward) {
+    if (!wallet.signer || !wallet.provider || !wallet.isCorrectNetwork) return;
+    const key = `${roundId}-${token.token}`;
+    setClaiming((items) => ({ ...items, [key]: "preparing" }));
+    try {
+      setClaiming((items) => ({ ...items, [key]: "confirming" }));
+      const hash = await BettingContractService.claimStockOnVault(wallet.signer, Number(roundId), token.token);
+      setClaiming((items) => ({ ...items, [key]: "pending" }));
+      await wallet.provider.waitForTransactionReceipt({ hash });
+      const explorer = `${DEFAULT_EXPLORER_URL}/tx/${hash}`;
+      toast.success(`${token.symbol} claimed for Round #${roundId}.`, { action: { label: "View transaction", onClick: () => window.open(explorer, "_blank", "noopener,noreferrer") } });
+      await refresh();
+    } catch (caught) { toast.error((caught as Error).message || "Unable to claim this stock reward."); }
+    finally { setClaiming((items) => { const { [key]: _, ...remaining } = items; return remaining; }); }
   }
 
-  async function handleWithdrawRush() {
-    if (!wallet.signer || !holderVaultAddress) return;
-    setWithdrawingRush(true);
-    try {
-      const txHash = await BettingContractService.withdrawAllRush(wallet.signer, holderVaultAddress);
-      await wallet.provider?.waitForTransactionReceipt({ hash: txHash });
-      toast.success("Staked RUSH withdrawn.");
-      if (wallet.provider && wallet.address) {
-        const position = await BettingContractService.getHolderPosition(wallet.provider, wallet.address as Address);
-        setHolderShares(formatUnits(position.shares, 18));
-        setPendingHolderRewards(formatUnits(position.pendingRewards, 18));
-        setWithdrawableRush(formatUnits(position.netAmount, 18));
-      }
-    } catch (error) {
-      toast.error((error as Error).message || "Unable to withdraw staked RUSH.");
-    } finally {
-      setWithdrawingRush(false);
-    }
-  }
+  if (!wallet.address) return <DisconnectedWallet />;
 
-  // reward claim handler removed
-
-  return (
-    <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
-      <p className="label-tech">Account</p>
-      <h1 className="mt-3 text-4xl leading-[0.95] sm:text-5xl">Wallet</h1>
-
-      {/* Scorecards */}
-      <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="clip-tag p-4 border border-border bg-surface/60">
-          <p className="label-tech text-xs">Active Positions</p>
-          <p className="mt-2 text-2xl font-mono">{betHistory.filter((b) => b.active).length}</p>
-        </div>
-        <div className="clip-tag p-4 border border-border bg-surface/60">
-          <p className="label-tech text-xs">Claimable Wins</p>
-          <p className="mt-2 text-2xl font-mono">{claimableWins.filter((c) => !c.claimed).length}</p>
-        </div>
-        <div className="clip-tag p-4 border border-border bg-surface/60">
-          <p className="label-tech text-xs">Total Bets</p>
-          <p className="mt-2 text-2xl font-mono">{betHistory.length}</p>
-        </div>
-      </div>
-
-      <div className="mt-10 grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-        <Panel>
-          {wallet.address ? (
-            <>
-              <p className="label-tech text-emerald-500">Connected · {wallet.providerName ?? wallet.status}</p>
-              <p className="mt-2 font-mono text-lg text-primary">
-                {shortAddress(wallet.address)}
-              </p>
-              <p className="label-tech mt-6">Withdrawable ETH</p>
-              <p className="font-display text-5xl text-primary">
-                {Number(betting.claimableEth || "0").toFixed(3)}
-                <span className="ml-2 text-base text-muted-foreground">{ticker}</span>
-              </p>
-
-              <div className="mt-6 clip-tag border border-border bg-surface/60 p-4">
-                <p className="label-tech">RUSH staking position</p>
-                <p className="mt-2 font-mono text-sm">{holderShares} shares</p>
-                <p className="mt-1 font-mono text-sm">Withdrawable: {withdrawableRush} RUSH</p>
-                <p className="mt-1 font-mono text-sm text-primary">{pendingHolderRewards} RUSH holder rewards</p>
-                <button
-                  onClick={handleClaimHolderRewards}
-                  disabled={!holderVaultAddress || Number(pendingHolderRewards) <= 0 || claimingHolderRewards}
-                  className="clip-tag mt-3 border border-primary/60 px-3 py-2 font-display text-xs font-bold uppercase tracking-[0.14em] text-primary disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {claimingHolderRewards ? "Claiming…" : "Claim holder rewards"}
-                </button>
-                <button
-                  onClick={handleWithdrawRush}
-                  disabled={!holderVaultAddress || Number(holderShares) <= 0 || withdrawingRush}
-                  className="clip-tag ml-3 mt-3 border border-primary/60 px-3 py-2 font-display text-xs font-bold uppercase tracking-[0.14em] text-primary disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {withdrawingRush ? "Withdrawing…" : "Withdraw RUSH"}
-                </button>
-              </div>
-
-              {/* Claim rewards UI removed */}
-
-              <div className="mt-6">
-                <input
-                  type="number"
-                  min={1}
-                  value={amount}
-                  onChange={(e) => setAmount(Number(e.target.value))}
-                  className="w-full border border-input bg-background px-3 py-2 font-mono text-sm outline-none focus:border-primary"
-                />
-                <div className="mt-3 grid grid-cols-1 gap-3">
-                  <button
-                    onClick={() => {
-                      walletStore.withdraw(amount);
-                      toast.success(`Withdrew ${amount} CR`);
-                    }}
-                    className="clip-tag bg-primary py-2.5 font-display text-xs font-bold uppercase tracking-[0.14em] text-primary-foreground"
-                  >
-                    Withdraw
-                  </button>
-                </div>
-              </div>
-
-              <button
-                onClick={async () => {
-                  await wallet.disconnect();
-                  toast.success("Wallet disconnected");
-                }}
-                className="mt-6 inline-flex items-center gap-2 font-mono text-xs text-destructive"
-              >
-                <LogOut className="h-3.5 w-3.5" /> Disconnect
-              </button>
-            </>
-          ) : (
-            <>
-              <WalletIcon className="h-6 w-6 text-primary" />
-              <h2 className="mt-4 text-2xl">Connect a wallet</h2>
-              
-              <div className="mt-6 grid gap-3">
-                {PROVIDERS.map((p) => (
-                  <button
-                    key={p}
-                    onClick={async () => {
-                      try {
-                        await wallet.connect(p);
-                        toast.success(`${p} connected`);
-                      } catch (error) {
-                        toast.error((error as Error).message || "Unable to connect wallet");
-                      }
-                    }}
-                    className="clip-tag flex items-center justify-between border border-border bg-surface-2/60 px-4 py-3 text-left transition-colors hover:border-primary"
-                  >
-                    <span className="font-display text-sm font-bold uppercase tracking-[0.12em]">
-                      {p}
-                    </span>
-                    <span className="font-mono text-xs text-muted-foreground">connect</span>
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </Panel>
-
-          {/* Claimable wins for settled rounds */}
-          <div className="mt-6">
-            <SectionHeading eyebrow="Claim" title="Claimable wins" />
-            <div className="mt-3 space-y-3">
-              {claimableWins.length === 0 ? (
-                <div className="clip-tag border border-border bg-surface/60 p-4 text-sm text-muted-foreground">No claimable wins</div>
-              ) : (
-                claimableWins.map((c) => (
-                  <div key={c.roundNumber.toString()} className="clip-tag flex items-center justify-between border border-border bg-surface/60 p-3">
-                    <div className="min-w-0">
-                      <p className="font-display text-sm">Round #{c.roundNumber.toString()}</p>
-                      <p className="label-tech mt-1 text-xs text-muted-foreground">Winnings: {c.gross} {ticker}</p>
-                    </div>
-                    <div>
-                      <button
-                        disabled={c.claimed || !wallet.signer}
-                        onClick={async () => {
-                          if (!wallet.signer) return;
-                          try {
-                            // If this round had a buyback, claim tokens via `claimStock` per-token.
-                            const tokens = await BettingContractService.getRoundBoughtTokens(wallet.provider!, Number(c.roundNumber));
-                            if (tokens && tokens.length > 0) {
-                              for (const t of tokens) {
-                                const txHash = await BettingContractService.claimStock(wallet.signer, Number(c.roundNumber), t as Address);
-                                await wallet.provider?.waitForTransactionReceipt({ hash: txHash as string });
-                              }
-                              toast.success("Token claims submitted");
-                            } else {
-                              const txHash = await BettingContractService.claimEth(wallet.signer, Number(c.roundNumber));
-                              await wallet.provider?.waitForTransactionReceipt({ hash: txHash as string });
-                              toast.success("Claim submitted");
-                            }
-                          } catch (err) {
-                            toast.error((err as Error).message || "Claim failed");
-                          }
-                        }}
-                        className="clip-tag border border-primary/60 px-3 py-2 font-display text-xs font-bold uppercase tracking-[0.14em] text-primary disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        {c.claimed ? "Claimed" : "Claim"}
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-        <div>
-          <SectionHeading eyebrow="Activity" title="Your positions" />
-          <div className="mt-6 grid gap-3">
-            {betHistory.filter(b => b.active).length === 0 && (
-              <div className="clip-tag border border-border bg-surface/60 p-6 text-sm text-muted-foreground">
-                No positions yet. Take a side on the live round.
-              </div>
-            )}
-            {betHistory.filter(b => b.active).map((s) => (
-              <div
-                key={`${s.roundNumber.toString()}-${s.side}`}
-                className="clip-tag grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border border-border bg-surface/60 p-4"
-              >
-                <div className="min-w-0">
-                  <p className="font-display text-lg uppercase">
-                    {s.side} {Number(s.roundNumber).toString()}
-                  </p>
-                  <p className="label-tech mt-1">
-                    Round #{s.roundNumber.toString().slice(-6)}
-                  </p>
-                </div>
-                <p className="shrink-0 font-mono text-sm text-primary">
-                  {Number(s.amount).toFixed(3)} {ticker}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="mt-8 lg:mt-0">
-          <SectionHeading eyebrow="History" title="Betting history" />
-          <div className="mt-4">
-            <Panel>
-                {betHistory.length === 0 ? (
-                  <div className="clip-tag border border-border bg-surface/60 p-6 text-sm text-muted-foreground">
-                    No betting history yet.
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {(() => {
-                      const claimableMap = new Map(claimableWins.map((c) => [c.roundNumber.toString(), c.claimed]));
-                      return betHistory.map((h) => {
-                        const key = h.roundNumber.toString();
-                        const isClaimable = claimableMap.has(key);
-                        const isClaimed = Boolean(claimableMap.get(key));
-                        return (
-                          <div key={`${h.roundNumber.toString()}-${h.side}`} className="clip-tag flex items-center justify-between border border-border bg-surface/60 p-3">
-                            <div className="min-w-0">
-                              <p className="font-display text-sm uppercase">{h.side}</p>
-                              <p className="label-tech mt-1 text-xs text-muted-foreground">Round #{h.roundNumber.toString().slice(-6)}</p>
-                              {isClaimable && !isClaimed && (
-                                <span className="label-tech mt-1 text-xs text-amber-500">Claimable</span>
-                              )}
-                              {isClaimable && isClaimed && (
-                                <span className="label-tech mt-1 text-xs text-emerald-500">Claimed</span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <div className="text-right font-mono text-sm text-primary">{Number(h.amount).toFixed(3)} {ticker}</div>
-                              {isClaimable && (
-                                <button
-                                  disabled={isClaimed || !wallet.signer}
-                                  onClick={async () => {
-                                    if (!wallet.signer) return;
-                                    try {
-                                      try {
-                                        const tokens = await BettingContractService.getRoundBoughtTokens(wallet.provider!, Number(h.roundNumber));
-                                        if (tokens && tokens.length > 0) {
-                                          for (const t of tokens) {
-                                            const txHash = await BettingContractService.claimStock(wallet.signer, Number(h.roundNumber), t as Address);
-                                            await wallet.provider?.waitForTransactionReceipt({ hash: txHash as string });
-                                          }
-                                          toast.success("Token claims submitted");
-                                        } else {
-                                          const txHash = await BettingContractService.claimEth(wallet.signer, Number(h.roundNumber));
-                                          await wallet.provider?.waitForTransactionReceipt({ hash: txHash as string });
-                                          toast.success("Claim submitted");
-                                        }
-                                      } catch (err) {
-                                        toast.error((err as Error).message || "Claim failed");
-                                      }
-                                    } catch (err) {
-                                      toast.error((err as Error).message || "Claim failed");
-                                    }
-                                  }}
-                                  className="clip-tag border border-primary/60 px-3 py-2 font-display text-xs font-bold uppercase tracking-[0.14em] text-primary disabled:cursor-not-allowed disabled:opacity-40"
-                                >
-                                  {isClaimed ? "Claimed" : "Claim"}
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      });
-                    })()}
-                  </div>
-                )}
-            </Panel>
-          </div>
-        </div>
-      </div>
+  const winningRounds = new Set(rewards.map((reward) => reward.roundNumber.toString()));
+  const wins = bets.filter((bet) => winningRounds.has(bet.roundNumber.toString())).length;
+  const totalWagered = bets.reduce((sum, bet) => sum + bet.amount, 0n);
+  return <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+    <p className="label-tech">Account</p><h1 className="mt-3 text-4xl leading-[0.95] sm:text-5xl">Wallet</h1>
+    <p className="mt-4 max-w-2xl text-sm text-muted-foreground">Your betting activity and stock rewards are tied directly to this connected wallet.</p>
+    <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_1.2fr]">
+      <Panel><p className="label-tech text-primary">Connected wallet</p><p className="mt-3 font-mono text-xl">{shortAddress(wallet.address)}</p><p className="mt-2 break-all font-mono text-xs text-muted-foreground">{wallet.address}</p><p className="label-tech mt-7">ETH balance</p><p className="mt-2 font-display text-4xl text-primary">{Number(wallet.nativeBalance).toFixed(4)} <span className="text-base text-muted-foreground">ETH</span></p><div className="mt-6 flex flex-wrap gap-3"><button onClick={() => { void navigator.clipboard.writeText(wallet.address!); toast.success("Wallet address copied."); }} className="clip-tag inline-flex items-center gap-2 border border-border px-3 py-2 font-display text-xs uppercase"><Copy className="h-3.5 w-3.5" />Copy address</button><button onClick={() => void wallet.disconnect()} className="clip-tag inline-flex items-center gap-2 border border-destructive/60 px-3 py-2 font-display text-xs uppercase text-destructive"><LogOut className="h-3.5 w-3.5" />Disconnect</button></div></Panel>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"><Stat label="Total bets" value={String(bets.length)} /><Stat label="Wins" value={String(wins)} /><Stat label="Losses" value={String(Math.max(0, bets.length - wins))} /><Stat label="Win rate" value={bets.length ? `${Math.round((wins / bets.length) * 100)}%` : "—"} /><Stat label="Total wagered" value={`${amount(totalWagered, 18)} ETH`} /><Stat label="Stock rounds" value={String(rewards.length)} /></div>
     </div>
-  );
+    <section className="mt-12"><SectionHeading eyebrow="On-chain rewards" title="Stock rewards">Each reward belongs to its original round and is claimed separately from the StockVault.</SectionHeading>
+      {!wallet.isCorrectNetwork ? <Panel className="mt-6"><p className="text-sm text-destructive">Switch to the supported network to view and claim stock rewards.</p></Panel> : loading ? <Panel className="mt-6">Loading reward rounds…</Panel> : error ? <Panel className="mt-6"><p className="text-sm text-destructive">{error}</p><button onClick={() => void refresh()} className="mt-4 text-sm text-primary">Try again</button></Panel> : rewards.length === 0 ? <Panel className="mt-6"><p className="text-sm text-muted-foreground">No eligible stock reward rounds yet. Winning rounds will appear here once the stock reward flow is available.</p></Panel> : <div className="mt-6 grid gap-4 xl:grid-cols-2">{rewards.map((round) => <RewardCard key={round.roundNumber.toString()} round={round} claiming={claiming} claim={claim} />)}</div>}
+    </section>
+    <section className="mt-12"><SectionHeading eyebrow="Betting activity" title="Round history">Recent positions from your connected wallet.</SectionHeading><Panel className="mt-6 overflow-x-auto p-0"><table className="w-full min-w-[560px] text-left text-sm"><thead><tr className="border-b border-border"><th className="label-tech px-5 py-4">Round</th><th className="label-tech px-5 py-4">Side</th><th className="label-tech px-5 py-4">Wager</th><th className="label-tech px-5 py-4 text-right">Result</th></tr></thead><tbody>{loading ? <tr><td colSpan={4} className="px-5 py-8 text-center text-muted-foreground">Loading betting history…</td></tr> : bets.length === 0 ? <tr><td colSpan={4} className="px-5 py-8 text-center text-muted-foreground">No bets found for this wallet.</td></tr> : bets.map((bet) => <tr key={bet.roundNumber.toString()} className="border-b border-border/60 last:border-0"><td className="px-5 py-4 font-mono">#{bet.roundNumber.toString()}</td><td className="px-5 py-4">{bet.side}</td><td className="px-5 py-4 font-mono">{amount(bet.amount, 18)} ETH</td><td className="px-5 py-4 text-right"><span className={winningRounds.has(bet.roundNumber.toString()) ? "clip-tag border border-primary/60 bg-primary/10 px-2 py-1 font-mono text-xs text-primary" : "font-mono text-xs text-muted-foreground"}>{winningRounds.has(bet.roundNumber.toString()) ? "Won" : "No stock reward"}</span></td></tr>)}</tbody></table></Panel></section>
+  </div>;
 }
+
+function RewardCard({ round, claiming, claim }: { round: RewardRound; claiming: Record<string, ClaimState>; claim: (id: bigint, token: TokenReward) => Promise<void> }) {
+  const status = !round.created || !round.settled ? "Reward pending" : !round.finalized ? "Stock reward pending" : round.gross > 0n ? round.claimed ? "Partially claimed" : "Reward available" : round.entitled > 0n ? "Claimed" : "No claimable reward";
+  return <Panel as="article" className="border border-border bg-surface-2/40"><div className="flex items-start justify-between gap-4"><div><p className="label-tech">Round #{round.roundNumber.toString()}</p><p className="mt-2 text-xl">Won · {round.winningSide}</p></div><span className="clip-tag border border-primary/50 bg-primary/10 px-2 py-1 font-mono text-[0.65rem] uppercase text-primary">{status}</span></div><div className="mt-6 grid gap-2 border-y border-border py-4 text-sm sm:grid-cols-2"><p className="text-muted-foreground">Your contribution <span className="ml-2 font-mono text-foreground">{amount(round.contribution, 18)} ETH</span></p><p className="text-muted-foreground">Winning side <span className="ml-2 font-mono text-foreground">{round.winningSide}</span></p></div><p className="label-tech mt-5">Stock rewards</p>{round.tokens.length === 0 ? <p className="mt-3 text-sm text-muted-foreground">{round.finalized ? "No claimable reward." : "Stock purchase is still pending."}</p> : <div className="mt-3 space-y-3">{round.tokens.map((token) => { const state = claiming[`${round.roundNumber}-${token.token}`]; const label = state === "preparing" ? "Preparing…" : state === "confirming" ? "Confirm in wallet" : state === "pending" ? "Claiming…" : token.claimable > 0n ? "Claim" : "Claimed ✓"; return <div key={token.token} className="clip-tag flex flex-wrap items-center justify-between gap-3 border border-border bg-background/60 p-3"><div><p className="font-mono text-sm">{token.symbol}</p><p className="mt-1 text-xs text-muted-foreground">Entitled {amount(token.entitled, token.decimals)} · Claimed {amount(token.alreadyClaimed, token.decimals)}</p><p className="mt-1 font-mono text-sm text-primary">Available {amount(token.claimable, token.decimals)} {token.symbol}</p></div><button disabled={!round.finalized || token.claimable === 0n || Boolean(state)} onClick={() => void claim(round.roundNumber, token)} className="clip-tag border border-primary px-3 py-2 font-display text-xs uppercase text-primary disabled:opacity-40">{label}</button></div>; })}</div>}</Panel>;
+}
+
+function Stat({ label, value }: { label: string; value: string }) { return <Panel className="border border-border bg-surface-2/60"><p className="label-tech">{label}</p><p className="mt-3 font-mono text-2xl text-primary">{value}</p></Panel>; }
+function amount(value: bigint, decimals: number) { const parsed = Number(formatUnits(value, decimals)); return Number.isFinite(parsed) ? parsed.toLocaleString(undefined, { maximumFractionDigits: 6 }) : formatUnits(value, decimals); }
+function DisconnectedWallet() { return <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6"><Panel><WalletIcon className="h-7 w-7 text-primary" /><p className="label-tech mt-5">Wallet</p><h1 className="mt-3 text-4xl leading-[0.95] sm:text-5xl">Connect your wallet</h1><p className="mt-4 max-w-xl text-sm text-muted-foreground">Connect a wallet to view your balance, betting history, and stock rewards by round.</p></Panel></div>; }

@@ -18,7 +18,7 @@ interface UserBetState {
   claimableEth: string;
   claimableRush: string;
   claimStatus: ClaimStatus;
-  protocolFee?: string;
+  protocolFeeBps?: number;
   loading: boolean;
   error: string | null;
 }
@@ -33,7 +33,7 @@ const initialState: UserBetState = {
   claimableEth: "0",
   claimableRush: "0",
   claimStatus: "unknown",
-  protocolFee: undefined,
+  protocolFeeBps: undefined,
   loading: false,
   error: null,
 };
@@ -121,7 +121,7 @@ export function useBettingContract(roundNumberOverride?: number) {
         claimableEth: formatTokenAmount(safeClaimableEth),
         claimableRush: formatTokenAmount(safeClaimableRush),
         claimStatus: String(claimStatusRaw) as string,
-        protocolFee: formatTokenAmount(safeFee),
+        protocolFeeBps: Number(safeFee),
         loading: false,
         error: null,
       }));

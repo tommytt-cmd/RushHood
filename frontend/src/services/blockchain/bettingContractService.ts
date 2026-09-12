@@ -69,9 +69,79 @@ export class BettingContractService {
     return entries.filter((entry) => entry.gross > 0n || entry.claimed || entry.staked);
   }
 
+  /**
+   * Return stock reward history per round by querying the configured StockVault
+   * for per-token entitlements. Each entry contains tokens with entitled/claimable amounts.
+   */
+  static async getStockRewardHistory(provider: PublicClient, player: Address, limit = 25) {
+    const { address, abi } = getBettingContractConfig();
+    const currentRound = BigInt(
+      (await provider.readContract({ address: address as Address, abi, functionName: "currentRoundId" })) as bigint,
+    );
+    const first = currentRound > BigInt(limit) ? currentRound - BigInt(limit) + 1n : 1n;
+    const rounds = Array.from(
+      { length: Number(currentRound >= first ? currentRound - first + 1n : 0n) },
+      (_, index) => currentRound - BigInt(index),
+    );
+
+    const vaultAddress = (import.meta.env["VITE_STOCK_VAULT_ADDRESS"] ?? import.meta.env["VITE_STOCK_VAULT"]) as string | undefined;
+    if (!vaultAddress) return [] as Array<any>;
+
+    const STOCK_VAULT_ABI: Abi = [
+      { type: "function", name: "calculateEntitlement", stateMutability: "view", inputs: [{ type: "uint256" }, { type: "address" }, { type: "address" }], outputs: [{ type: "uint256" }, { type: "uint256" }, { type: "uint256" }] },
+      { type: "function", name: "isWinner", stateMutability: "view", inputs: [{ type: "uint256" }, { type: "address" }], outputs: [{ type: "bool" }] },
+      { type: "function", name: "getWinnerContribution", stateMutability: "view", inputs: [{ type: "uint256" }, { type: "address" }], outputs: [{ type: "uint256" }] },
+      { type: "function", name: "getRoundInfo", stateMutability: "view", inputs: [{ type: "uint256" }], outputs: [{ type: "bool" }, { type: "bool" }, { type: "uint256" }, { type: "uint256" }] },
+    ];
+
+    const entries = await Promise.all(rounds.map(async (roundNumber) => {
+      try {
+        const [winner, contribution, vaultRound, gameRound] = await Promise.all([
+          provider.readContract({ address: vaultAddress as Address, abi: STOCK_VAULT_ABI, functionName: "isWinner", args: [roundNumber, player] }),
+          provider.readContract({ address: vaultAddress as Address, abi: STOCK_VAULT_ABI, functionName: "getWinnerContribution", args: [roundNumber, player] }),
+          provider.readContract({ address: vaultAddress as Address, abi: STOCK_VAULT_ABI, functionName: "getRoundInfo", args: [roundNumber] }),
+          provider.readContract({ address: address as Address, abi, functionName: "getRoundInfo", args: [roundNumber] }),
+        ]);
+        if (!winner) return null;
+        const tokens = await BettingContractService.getRoundBoughtTokens(provider, Number(roundNumber));
+
+        let totalEntitled = 0n;
+        let totalClaimable = 0n;
+        const tokenEntries: Array<any> = [];
+        for (const t of tokens) {
+          const [entitled, alreadyClaimed, claimable] = await provider.readContract({ address: vaultAddress as Address, abi: STOCK_VAULT_ABI, functionName: "calculateEntitlement", args: [roundNumber, t as Address, player] }).catch(() => [0n, 0n, 0n]);
+          const entitlement = BigInt(entitled?.toString() ?? "0");
+          totalEntitled += entitlement;
+          totalClaimable += BigInt(claimable?.toString() ?? "0");
+          tokenEntries.push({ token: t, entitled: entitlement, alreadyClaimed: BigInt(alreadyClaimed?.toString() ?? "0"), claimable: BigInt(claimable?.toString() ?? "0") });
+        }
+
+        const anyClaimed = tokenEntries.some((te) => te.alreadyClaimed > 0n);
+        const [created, finalized] = vaultRound as [boolean, boolean, bigint, bigint];
+        const round = gameRound as any;
+        return {
+          roundNumber,
+          contribution: BigInt(contribution.toString()),
+          gross: totalClaimable,
+          entitled: totalEntitled,
+          claimed: anyClaimed,
+          created: Boolean(created),
+          finalized: Boolean(finalized),
+          settled: Boolean(round.settled ?? round[12]),
+          winningSide: Number(round.winningSide ?? round[11]) === 0 ? "OVER" : "UNDER",
+          tokens: tokenEntries,
+        };
+      } catch (err) {
+        return null;
+      }
+    }));
+
+    return (entries.filter(Boolean) as Array<any>).filter((entry) => entry.gross > 0n || entry.claimed);
+  }
+
   static async getBetHistory(provider: PublicClient, player: Address, limit = 25) {
     const { address, abi } = getBettingContractConfig();
-    const latest = BigInt(await provider.readContract({ address: address as Address, abi, functionName: "latestRound" }) as bigint);
+    const latest = BigInt(await provider.readContract({ address: address as Address, abi, functionName: "currentRoundId" }) as bigint);
     const first = latest > BigInt(limit) ? latest - BigInt(limit) + 1n : 1n;
     const rounds = Array.from({ length: Number(latest >= first ? latest - first + 1n : 0n) }, (_, index) => latest - BigInt(index));
     const entries = await Promise.all(rounds.map(async (roundNumber) => {
@@ -368,9 +438,24 @@ export class BettingContractService {
       address: contractAddress as Address,
       abi,
       functionName: "roundBoughtTokens",
-      args: [BigInt(roundNumber)],
-    }).catch(() => [] as Address[]);
-    return Array.isArray(result) ? (result as Address[]) : [];
+      args: [BigInt(roundNumber), 0n],
+    }).catch(() => undefined);
+    // `roundBoughtTokens` is a public Solidity array getter, so it exposes an
+    // index rather than a whole array. Read a small bounded set of slots and
+    // stop at the first unset address.
+    if (!result) return [] as Address[];
+    const tokens: Address[] = [];
+    for (let index = 0; index < 16; index += 1) {
+      const token = await provider.readContract({
+        address: contractAddress as Address,
+        abi,
+        functionName: "roundBoughtTokens",
+        args: [BigInt(roundNumber), BigInt(index)],
+      }).catch(() => "0x0000000000000000000000000000000000000000" as Address);
+      if (token.toLowerCase() === "0x0000000000000000000000000000000000000000") break;
+      tokens.push(token as Address);
+    }
+    return tokens;
   }
 
   static async getUserUnclaimedTokenForRound(provider: PublicClient, roundNumber: number, player: Address, token: Address) {
@@ -396,6 +481,34 @@ export class BettingContractService {
     return signer.writeContract({
       chain: signer.chain,
       address: contractAddress as Address,
+      abi,
+      functionName: "claimStock",
+      args: [BigInt(roundNumber), token as Address],
+      account,
+    });
+  }
+
+  /**
+   * Some deployments route token claims through a dedicated StockVault.
+   * This helper writes directly to the configured `VITE_STOCK_VAULT_ADDRESS`.
+   */
+  static async claimStockOnVault(signer: WalletClient, roundNumber: number, token: Address) {
+    const account = signer.account;
+    if (typeof signer.writeContract !== "function") {
+      throw new Error("Wallet signer is not a viem WalletClient: missing writeContract().");
+    }
+    if (!account) throw new Error("Wallet client has no connected account.");
+
+    const vaultAddress = (import.meta.env["VITE_STOCK_VAULT_ADDRESS"] ?? import.meta.env["VITE_STOCK_VAULT"]) as string | undefined;
+    if (!vaultAddress) throw new Error("Missing VITE_STOCK_VAULT (or VITE_STOCK_VAULT_ADDRESS) environment variable.");
+
+    const abi: Abi = [
+      { type: "function", name: "claimStock", stateMutability: "nonpayable", inputs: [{ name: "roundId", type: "uint256" }, { name: "stockToken", type: "address" }], outputs: [] },
+    ];
+
+    return signer.writeContract({
+      chain: signer.chain,
+      address: vaultAddress as Address,
       abi,
       functionName: "claimStock",
       args: [BigInt(roundNumber), token as Address],

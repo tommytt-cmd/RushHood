@@ -21,7 +21,7 @@ interface StakeProps {
   pool: { under: number; over: number } | null;
 }
 
-const AMOUNTS = [0.01, 0.02, 0.03, 0.04, 0.05];
+const AMOUNTS = [0.001, 0.002, 0.003, 0.004, 0.005];
 
 export function StakePanel({ roundId, phase, roundNumber, threshold, pool }: StakeProps) {
   const wallet = useBlockchainWallet();
@@ -29,7 +29,7 @@ export function StakePanel({ roundId, phase, roundNumber, threshold, pool }: Sta
   const displayedPool = betting.pool ?? pool;
   const { pushTransaction, updateTransaction } = useTransactions();
   const [side, setSide] = useState<"under" | "over">("under");
-  const [amount, setAmount] = useState("0.01");
+  const [amount, setAmount] = useState("0.001");
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [backendSyncError, setBackendSyncError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -44,6 +44,15 @@ export function StakePanel({ roundId, phase, roundNumber, threshold, pool }: Sta
   const total = displayedPool ? displayedPool.under + displayedPool.over : null;
   const underX = total !== null && displayedPool && displayedPool.under > 0 ? total / displayedPool.under : null;
   const overX = total !== null && displayedPool && displayedPool.over > 0 ? total / displayedPool.over : null;
+  // RushBetting deducts protocolFeeBps from the whole pool, then distributes
+  // claimablePool proportionally across the winning side.
+  const protocolFeeBps = betting.protocolFeeBps ?? 1_000;
+  const winningPool = betting.side === "OVER" ? displayedPool?.over : displayedPool?.under;
+  const postFeePool = total === null ? null : (total * (10_000 - protocolFeeBps)) / 10_000;
+  const lockedMultiplier = postFeePool !== null && winningPool && winningPool > 0
+    ? postFeePool / winningPool
+    : null;
+  const lockedReturn = lockedMultiplier === null ? null : Number(betting.amountEth) * lockedMultiplier;
 
   const statusMessage = useMemo(() => {
     if (!walletConnected) return "Connect your wallet to place a bet.";
@@ -161,6 +170,7 @@ export function StakePanel({ roundId, phase, roundNumber, threshold, pool }: Sta
       }
 
       await betting.readUserBet();
+      await betting.readPool();
     } catch (error) {
       console.error("[StakePanel] submit() transaction write failed", {
         error,
@@ -213,6 +223,16 @@ export function StakePanel({ roundId, phase, roundNumber, threshold, pool }: Sta
           <p className="mt-2 font-display text-xl">
             {betting.amountEth} {ticker} · <span className={betting.side === "OVER" ? "text-emerald-500" : "text-rose-400"}>{betting.side}</span>
           </p>
+          {lockedMultiplier !== null && lockedReturn !== null ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              If this side wins: <span className="font-mono text-primary">{lockedMultiplier.toFixed(2)}×</span>
+              <span className="mx-1">·</span>
+              estimated winning-pool share <span className="font-mono text-primary">{lockedReturn.toFixed(6)} {ticker}</span>
+            </p>
+          ) : (
+            <p className="mt-2 text-xs text-muted-foreground">Payout estimate will appear once the round pool is available.</p>
+          )}
+          <p className="mt-1 text-xs text-muted-foreground">This ETH pool share is used to purchase stock rewards, not paid as a direct ETH withdrawal. It uses current pools after the {protocolFeeBps / 100}% protocol fee; final pools can change until betting closes.</p>
           <p className="mt-1 text-xs text-muted-foreground">Your bet is stored on the smart contract and will settle when the round closes.</p>
         </div>
       ) : (

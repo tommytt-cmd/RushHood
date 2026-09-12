@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+websockets
+sqlalchemy
+pydantic
+python-dotenv
+aiosqlite
+asyncpg
+pytest
+pytest-asyncio
+alembic
+eth-account
+web3
+python-multipart
+supabase
+greenlet
+redis

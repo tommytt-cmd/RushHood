@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ethers } from "ethers";
+import { BrowserProvider, Contract, formatEther } from "ethers";
 import { ArrowDown, ArrowUp, CircleDollarSign, Loader2 } from "lucide-react";
 
 interface BetSlipProps {
@@ -39,14 +39,13 @@ export function BetSlip({
         // require injected provider and env var for contract address
         const anyWindow: any = window;
         if (!anyWindow.ethereum) return;
-        const provider = new ethers.providers.Web3Provider(anyWindow.ethereum);
-        const address = process.env.NEXT_PUBLIC_BETTING_ADDRESS;
+        const provider = new BrowserProvider(anyWindow.ethereum);
+        const address = import.meta.env["VITE_BETTING_CONTRACT_ADDRESS"];
         if (!address) return;
         const abi = ["function getMinBet() view returns (uint256)"];
-        const contract = new ethers.Contract(address, abi, provider);
-        const val: ethers.BigNumber = await contract.getMinBet();
-        setMinBetOnChain(ethers.utils.formatEther(val));
-        console.log(`Fetched min bet: ${minBetOnChain} ETH from contract at ${address}`);
+        const contract = new Contract(address, abi, provider);
+        const val = (await contract.getMinBet()) as bigint;
+        setMinBetOnChain(formatEther(val));
       } catch (e) {
         // ignore failures; keep local UX working
       }

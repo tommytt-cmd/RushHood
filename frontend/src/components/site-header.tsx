@@ -9,8 +9,6 @@ import { useWalletModal } from "@/components/wallet-connect-modal";
 const NAV = [
   { to: "/", label: "Live" },
   { to: "/how-it-works", label: "How it works" },
-  {/* to: "/profile", label: "Profile" */},
-  {/* to: "/rewards", label: "RUSH Rewards" */},
   { to: "/wallet", label: "Wallet" },
   { to: "/about", label: "About" },
 ] as const;
