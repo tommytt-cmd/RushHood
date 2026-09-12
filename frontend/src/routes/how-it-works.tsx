@@ -10,12 +10,12 @@ export const Route = createFileRoute("/how-it-works")({
       {
         name: "description",
         content:
-          "Betting, locked, live and settling: how a TRAFFIC vehicle-count round runs, how thresholds are set and how payouts settle.",
+          "How a TRAFFIC vehicle-count round accepts ETH stakes, resolves through its oracle, and allocates purchased stock tokens to winning users.",
       },
       { property: "og:title", content: "How TRAFFIC Works — Phases, Thresholds, Settlement" },
       {
         property: "og:description",
-        content: "The four phases of a vehicle-count round and how under/over payouts are settled.",
+        content: "The betting deadline, oracle settlement, stock purchase and claim flow for a TRAFFIC round.",
       },
     ],
   }),
@@ -24,20 +24,20 @@ export const Route = createFileRoute("/how-it-works")({
 
 const STEPS = [
   {
-    title: "A window is published",
-    body: "Each round names a junction, a counting window and a vehicle threshold derived from the last 24 hours of feed data.",
+    title: "A round opens",
+    body: "The protocol operator opens a prediction market with a vehicle threshold and betting deadline. The threshold is fixed for that market after it opens.",
   },
   {
     title: "You pick a side",
-    body: "Stake credits on UNDER or OVER the threshold. Both sides form one pool; odds move with the pool balance.",
+    body: "You stake ETH on either UNDER or OVER before the on-chain deadline. A configured minimum stake may apply.",
   },
   {
-    title: "Cameras count",
-    body: "During the live phase, four junction cameras count passing vehicles and stream the running total.",
+    title: "The market settles",
+    body: "After betting closes, only the designated result publisher can submit the final count. OVER wins when the count is greater than the threshold; an equal count resolves as UNDER.",
   },
   {
-    title: "The round settles",
-    body: "The verified final count is compared to the threshold and the winning pool is split pro-rata by stake size.",
+    title: "Winners claim stock tokens",
+    body: "The post-fee winner reward pool is used to buy the enabled stock-token portfolio. Once the reward vault is finalized, each winning user can claim a pro-rata allocation for each purchased token.",
   },
 ];
 
@@ -47,8 +47,9 @@ function HowItWorks() {
       <p className="label-tech">Protocol</p>
       <h1 className="mt-3 max-w-2xl text-4xl leading-[0.95] sm:text-5xl">How TRAFFIC works</h1>
       <p className="mt-4 max-w-xl text-sm text-muted-foreground">
-        One question, repeated every three minutes: how many vehicles will the junction count? Every
-        round moves through four phases.
+        Every prediction market asks whether the final vehicle count will finish UNDER or OVER its
+        published threshold. The interface shows four operational phases; the protocol enforces the
+        betting deadline and settlement by the designated result publisher.
       </p>
 
       <div className="mt-12 grid gap-4 md:grid-cols-4">
@@ -64,8 +65,9 @@ function HowItWorks() {
 
       <div className="mt-16">
         <SectionHeading eyebrow="Round lifecycle" title="From feed to payout">
-          Thresholds are published before betting opens, so nobody can move the line once positions
-          are being taken.
+          Thresholds and betting deadlines are stored on-chain before players enter positions. The
+          application may show live telemetry, but the designated result publisher's post-deadline
+          result is the value that settles the market.
         </SectionHeading>
         <div className="mt-8 grid gap-6 md:grid-cols-2">
           {STEPS.map((s, i) => (
@@ -79,14 +81,17 @@ function HowItWorks() {
       </div>
 
       <div className="mt-16">
-        <SectionHeading eyebrow="Payouts" title="How odds are calculated" />
+        <SectionHeading eyebrow="Rewards" title="How winning allocations are calculated" />
         <Panel className="mt-6">
           <p className="font-mono text-sm text-primary">
-            payout = your_stake × (under_pool + over_pool) ÷ winning_pool
+            token allocation = round token balance × your winning stake ÷ total winning-user stake
           </p>
           <p className="mt-4 text-sm text-muted-foreground">
-            The unpopular side pays more. If everyone stakes OVER and the count lands under, the few
-            UNDER positions split the entire round pool.
+            The protocol records eligible winners and their winning stakes in the reward vault. The
+            protocol treasury divides the market's available ETH equally across every enabled stock,
+            swaps into those tokens, and transfers them to the vault. Each winner's claim is
+            calculated separately for each acquired token. If a stock purchase fails, the protocol
+            operator can retry it before the reward vault is finalized.
           </p>
         </Panel>
       </div>
