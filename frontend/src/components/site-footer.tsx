@@ -11,7 +11,7 @@ export function SiteFooter() {
             <span className="font-display text-lg font-bold tracking-[0.28em]">TRAFFIC</span>
           </div>
           <p className="mt-3 max-w-sm text-sm text-muted-foreground">
-            Live vehicle-count markets. Stake under or over the threshold, settle on verified
+            Live vehicle-count prediction market. Stake under or over the threshold, settle on verified
             junction camera data.
           </p>
         </div>

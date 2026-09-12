@@ -2,6 +2,11 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { useAccount, useConnect, type Connector } from "wagmi";
 import { Loader2, X } from "lucide-react";
 import { toast } from "sonner";
+import {
+  WalletCoinbase,
+  WalletMetamask,
+  WalletWalletConnect,
+} from "@web3icons/react";
 
 import { walletStore } from "@/lib/store";
 
@@ -19,7 +24,15 @@ export function useWalletModal() {
   return useContext(WalletModalContext);
 }
 
-const META: Record<string, { label: string; blurb: string; accent: string; glyph: string; iconUrl?: string }> = {
+interface WalletMeta {
+  label: string;
+  blurb: string;
+  accent: string;
+  glyph: string;
+  icon?: ReactNode;
+}
+
+const META: Record<string, WalletMeta> = {
   "io.rainbow": { label: "Rainbow", blurb: "Open in Rainbow app", accent: "#1b2c5a", glyph: "R" },
   rainbow: { label: "Rainbow", blurb: "Open in Rainbow app", accent: "#1b2c5a", glyph: "R" },
   walletConnect: {
@@ -27,28 +40,28 @@ const META: Record<string, { label: string; blurb: string; accent: string; glyph
     blurb: "Rainbow, Trust, and 300+ wallets",
     accent: "#1d7cf2",
     glyph: "◉",
-    iconUrl: "https://cdn.simpleicons.org/walletconnect/ffffff",
+    icon: <WalletWalletConnect size={28} variant="branded" />,
   },
   coinbaseWalletSDK: {
     label: "Coinbase Wallet",
     blurb: "Open in Coinbase Wallet app",
     accent: "#0052ff",
     glyph: "◍",
-    iconUrl: "https://cdn.simpleicons.org/coinbase/ffffff",
+    icon: <WalletCoinbase size={28} variant="branded" />,
   },
   "io.metamask": {
     label: "MetaMask",
     blurb: "Open in MetaMask app",
     accent: "#3a1e0d",
     glyph: "M",
-    iconUrl: "https://cdn.simpleicons.org/metamask/ffffff",
+    icon: <WalletMetamask size={28} variant="branded" />,
   },
   metaMask: {
     label: "MetaMask",
     blurb: "Open in MetaMask app",
     accent: "#3a1e0d",
     glyph: "M",
-    iconUrl: "https://cdn.simpleicons.org/metamask/ffffff",
+    icon: <WalletMetamask size={28} variant="branded" />,
   },
   injected: { label: "Browser Wallet", blurb: "Use your installed extension", accent: "#1f2a26", glyph: "◆" },
 };
@@ -65,24 +78,14 @@ function metaFor(connector: Connector) {
   );
 }
 
-function WalletLogo({ meta }: { meta: ReturnType<typeof metaFor> }) {
+function WalletLogo({ meta }: { meta: WalletMeta }) {
   return (
     <span
       className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg font-display text-lg font-bold text-white"
       style={{ backgroundColor: meta.accent }}
       aria-hidden
     >
-      <span className="absolute inset-0 flex items-center justify-center">{meta.glyph}</span>
-      {meta.iconUrl && (
-        <img
-          src={meta.iconUrl}
-          alt=""
-          className="relative h-7 w-7"
-          onError={(event) => {
-            event.currentTarget.remove();
-          }}
-        />
-      )}
+      {meta.icon ?? meta.glyph}
     </span>
   );
 }

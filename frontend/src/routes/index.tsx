@@ -70,9 +70,6 @@ function Index() {
       {/* HERO */}
       <section className="relative border-b border-border">
         <div className="relative mx-auto max-w-7xl px-4 pt-8 pb-12 sm:px-6">
-          <p className="label-tech">
-            {JUNCTION.name} · {JUNCTION.cameras} cameras
-          </p>
           <h1 className="mt-3 max-w-3xl text-4xl leading-[0.95] sm:text-6xl">
             TRAFFIC — Live vehicle-count prediction markets
           </h1>
