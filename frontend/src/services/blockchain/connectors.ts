@@ -9,7 +9,8 @@ export interface WalletConnector {
 export const MetaMaskConnector: WalletConnector = {
   id: "MetaMask",
   label: "MetaMask",
-  installed: () => typeof window !== "undefined" && typeof window.ethereum !== "undefined",
+  installed: () =>
+    typeof window !== "undefined" && typeof window.ethereum !== "undefined",
 };
 
 export const WalletConnectConnector: WalletConnector = {
@@ -18,4 +19,31 @@ export const WalletConnectConnector: WalletConnector = {
   installed: () => false,
 };
 
-export const CONNECTORS = [MetaMaskConnector, WalletConnectConnector];
+export const CoinbaseConnector: WalletConnector = {
+  id: "Coinbase Wallet",
+  label: "Coinbase Wallet",
+  installed: () =>
+    typeof window !== "undefined" &&
+    Boolean(
+      window.ethereum?.isCoinbaseWallet ||
+      window.ethereum?.providers?.some((provider) => provider.isCoinbaseWallet),
+    ),
+};
+
+export const RainbowConnector: WalletConnector = {
+  id: "Rainbow",
+  label: "Rainbow",
+  installed: () =>
+    typeof window !== "undefined" &&
+    Boolean(
+      window.ethereum?.isRainbow ||
+      window.ethereum?.providers?.some((provider) => provider.isRainbow),
+    ),
+};
+
+export const CONNECTORS = [
+  MetaMaskConnector,
+  CoinbaseConnector,
+  RainbowConnector,
+  WalletConnectConnector,
+];

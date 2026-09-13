@@ -1,14 +1,14 @@
 export const WALLET_CONNECTORS = {
   METAMASK: "MetaMask",
   COINBASE: "Coinbase Wallet",
-  BROWSER: "Browser Wallet",
+  RAINBOW: "Rainbow",
   WALLETCONNECT: "WalletConnect",
 } as const;
 
 export const SUPPORTED_WALLETS = [
   WALLET_CONNECTORS.METAMASK,
   WALLET_CONNECTORS.COINBASE,
-  WALLET_CONNECTORS.BROWSER,
+  WALLET_CONNECTORS.RAINBOW,
   WALLET_CONNECTORS.WALLETCONNECT,
 ] as const;
 
@@ -20,9 +20,15 @@ export const CHAIN_KEYS = {
 
 // Keep this fallback aligned with the deployed Robinhood testnet configuration.
 // Production deployments must still provide VITE_ROBINHOOD_CHAIN_ID explicitly.
-export const DEFAULT_CHAIN_ID = Number(import.meta.env.VITE_ROBINHOOD_CHAIN_ID ?? 46630);
-export const DEFAULT_RPC_URL = import.meta.env.VITE_ROBINHOOD_RPC_URL ?? "https://rpc.mainnet.chain.robinhood.com";
-export const DEFAULT_EXPLORER_URL = import.meta.env.VITE_BLOCK_EXPLORER ?? "https://robinhoodchain.blockscout.com";
+export const DEFAULT_CHAIN_ID = Number(
+  import.meta.env.VITE_ROBINHOOD_CHAIN_ID ?? 46630,
+);
+export const DEFAULT_RPC_URL =
+  import.meta.env.VITE_ROBINHOOD_RPC_URL ??
+  "https://rpc.mainnet.chain.robinhood.com";
+export const DEFAULT_EXPLORER_URL =
+  import.meta.env.VITE_BLOCK_EXPLORER ??
+  "https://robinhoodchain.blockscout.com";
 
 export const ROBINHOOD_CHAIN_INFO = {
   chainId: DEFAULT_CHAIN_ID,

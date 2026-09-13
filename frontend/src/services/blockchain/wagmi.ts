@@ -1,10 +1,21 @@
 import { createConfig, http } from "wagmi";
-import { coinbaseWallet, injected, metaMask, walletConnect } from "@wagmi/connectors";
+import {
+  coinbaseWallet,
+  injected,
+  metaMask,
+  walletConnect,
+} from "@wagmi/connectors";
 import { defineChain } from "viem";
 
-const robinhoodRpcUrl = import.meta.env["VITE_ROBINHOOD_RPC_URL"] ?? "https://rpc.testnet.chain.robinhood.com";
-const robinhoodExplorerUrl = import.meta.env["VITE_BLOCK_EXPLORER"] ?? "https://explorer.testnet.chain.robinhood.com";
-const robinhoodChainId = Number(import.meta.env["VITE_ROBINHOOD_CHAIN_ID"] ?? 46630);
+const robinhoodRpcUrl =
+  import.meta.env["VITE_ROBINHOOD_RPC_URL"] ??
+  "https://rpc.testnet.chain.robinhood.com";
+const robinhoodExplorerUrl =
+  import.meta.env["VITE_BLOCK_EXPLORER"] ??
+  "https://explorer.testnet.chain.robinhood.com";
+const robinhoodChainId = Number(
+  import.meta.env["VITE_ROBINHOOD_CHAIN_ID"] ?? 46630,
+);
 
 export const robinhoodChain = defineChain({
   id: robinhoodChainId,
@@ -28,13 +39,14 @@ export const robinhoodChain = defineChain({
   testnet: false,
 });
 
-const walletConnectProjectId = import.meta.env["VITE_WALLETCONNECT_PROJECT_ID"] ?? "";
+const walletConnectProjectId =
+  import.meta.env["VITE_WALLETCONNECT_PROJECT_ID"] ?? "";
 
 type WagmiRuntime = {
   connectors: {
     MetaMask: ReturnType<typeof metaMask>;
     Coinbase: ReturnType<typeof coinbaseWallet>;
-    Browser: ReturnType<typeof injected>;
+    Rainbow: ReturnType<typeof injected>;
     WalletConnect: ReturnType<typeof walletConnect>;
   };
   config: ReturnType<typeof createConfig>;
@@ -53,7 +65,21 @@ const runtime =
     const connectors = {
       MetaMask: metaMask(),
       Coinbase: coinbaseWallet({ appName: "TRAFFIC" }),
-      Browser: injected({ shimDisconnect: true }),
+      // Target Rainbow explicitly instead of offering a catch-all injected provider.
+      Rainbow: injected({
+        shimDisconnect: true,
+        target: {
+          id: "rainbow",
+          name: "Rainbow",
+          provider: (window) => {
+            const providers = window?.ethereum?.providers;
+            return (
+              providers?.find((provider) => provider.isRainbow) ??
+              (window?.ethereum?.isRainbow ? window.ethereum : undefined)
+            );
+          },
+        },
+      }),
       WalletConnect: walletConnect({
         projectId: walletConnectProjectId,
         showQrModal: false,
@@ -67,9 +93,11 @@ const runtime =
         connectors: [
           connectors.MetaMask,
           connectors.Coinbase,
-          connectors.Browser,
+          connectors.Rainbow,
           connectors.WalletConnect,
         ],
+        // Do not auto-discover and append every browser-injected wallet.
+        multiInjectedProviderDiscovery: false,
         transports: {
           [robinhoodChain.id]: http(robinhoodRpcUrl),
         },

@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { useAccount, useConnect, type Connector } from "wagmi";
 import { Loader2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -34,47 +41,47 @@ interface WalletMeta {
 }
 
 const META: Record<string, WalletMeta> = {
-  "io.rainbow": { 
-    label: "Rainbow", 
-    blurb: "Open in Rainbow app", 
-    accent: "#1b2c5a", 
-    glyph: "R",
-    icon: <WalletRainbow  size={30} variant="branded" />
-  },
-  rainbow: { 
+  "io.rainbow": {
     label: "Rainbow",
-     blurb: "Open in Rainbow app", 
-     accent: "#1b2c5a", 
-     glyph: "R",
-     icon: <WalletRainbow  size={30} variant="branded" /> 
-    },
+    blurb: "Open in Rainbow app",
+    accent: "#1b2c5a",
+    glyph: "R",
+    icon: <WalletRainbow size={40} variant="branded" />,
+  },
+  rainbow: {
+    label: "Rainbow",
+    blurb: "Open in Rainbow app",
+    accent: "#1b2c5a",
+    glyph: "R",
+    icon: <WalletRainbow size={40} variant="branded" />,
+  },
   walletConnect: {
     label: "WalletConnect",
     blurb: "Rainbow, Trust, and 300+ wallets",
     accent: "#1d7cf2",
     glyph: "◉",
-    icon: <WalletWalletConnect size={30} variant="branded" />,
+    icon: <WalletWalletConnect size={40} variant="background" />,
   },
   coinbaseWalletSDK: {
     label: "Coinbase Wallet",
     blurb: "Open in Coinbase Wallet app",
     accent: "#0052ff",
     glyph: "◍",
-    icon: <WalletCoinbase size={30} variant="branded" />,
+    icon: <WalletCoinbase size={40} variant="branded" />,
   },
   "io.metamask": {
     label: "MetaMask",
     blurb: "Open in MetaMask app",
     accent: "#3a1e0d",
     glyph: "M",
-    icon: <WalletMetamask size={30} variant="branded" />,
+    icon: <WalletMetamask size={40} variant="branded" />,
   },
   metaMask: {
     label: "MetaMask",
     blurb: "Open in MetaMask app",
     accent: "#3a1e0d",
     glyph: "M",
-    icon: <WalletMetamask size={30} variant="branded" />,
+    icon: <WalletMetamask size={40} variant="branded" />,
   },
 };
 
@@ -136,7 +143,9 @@ function WalletModal() {
             <h2 className="font-display text-xl font-bold uppercase tracking-[0.16em]">
               Connect wallet
             </h2>
-            <p className="mt-1 text-sm text-muted-foreground">Choose your wallet to get started</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Choose your wallet to get started
+            </p>
           </div>
           <button
             onClick={() => setOpen(false)}
@@ -161,7 +170,9 @@ function WalletModal() {
                     setOpen(false);
                   } catch (error) {
                     toast.error(
-                      error instanceof Error ? error.message : "Wallet connection cancelled",
+                      error instanceof Error
+                        ? error.message
+                        : "Wallet connection cancelled",
                     );
                   }
                 }}
@@ -172,9 +183,13 @@ function WalletModal() {
                   <span className="block font-display text-base font-bold tracking-[0.08em]">
                     {meta.label}
                   </span>
-                  <span className="block truncate text-sm text-muted-foreground">{meta.blurb}</span>
+                  <span className="block truncate text-sm text-muted-foreground">
+                    {meta.blurb}
+                  </span>
                 </span>
-                {busy && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />}
+                {busy && (
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
+                )}
               </button>
             );
           })}

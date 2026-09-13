@@ -1,10 +1,17 @@
 import { BrowserProvider } from "ethers";
 import { WALLET_LOCAL_STORAGE_KEY, SUPPORTED_WALLETS } from "./constants";
 import type { WalletAccount, WalletConnectorName } from "./types";
-import { MetaMaskConnector, WalletConnectConnector } from "./connectors";
+import {
+  CoinbaseConnector,
+  MetaMaskConnector,
+  RainbowConnector,
+  WalletConnectConnector,
+} from "./connectors";
 
-const CONNECTOR_MAP: Record<WalletConnectorName, typeof MetaMaskConnector | typeof WalletConnectConnector> = {
+const CONNECTOR_MAP: Record<WalletConnectorName, typeof MetaMaskConnector> = {
   MetaMask: MetaMaskConnector,
+  "Coinbase Wallet": CoinbaseConnector,
+  Rainbow: RainbowConnector,
   WalletConnect: WalletConnectConnector,
 };
 
@@ -15,7 +22,9 @@ export class WalletService {
   }
 
   static getAvailableConnectors() {
-    return SUPPORTED_WALLETS.filter((wallet) => CONNECTOR_MAP[wallet].installed());
+    return SUPPORTED_WALLETS.filter((wallet) =>
+      CONNECTOR_MAP[wallet]?.installed(),
+    );
   }
 
   static async connect(connector: WalletConnectorName): Promise<WalletAccount> {
@@ -59,7 +68,12 @@ export class WalletService {
   static getStoredConnector(): WalletConnectorName | null {
     if (typeof window === "undefined") return null;
     const connector = localStorage.getItem(WALLET_LOCAL_STORAGE_KEY);
-    return connector === "MetaMask" || connector === "WalletConnect" ? connector : null;
+    return connector === "MetaMask" ||
+      connector === "Coinbase Wallet" ||
+      connector === "Rainbow" ||
+      connector === "WalletConnect"
+      ? connector
+      : null;
   }
 
   static async getAccount(): Promise<WalletAccount | null> {

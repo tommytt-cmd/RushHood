@@ -1,8 +1,20 @@
 import { useEffect, useMemo } from "react";
 import type { Connector } from "wagmi";
-import { useAccount, useBalance, useConnect, useDisconnect, usePublicClient, useSwitchChain, useWalletClient } from "wagmi";
+import {
+  useAccount,
+  useBalance,
+  useConnect,
+  useDisconnect,
+  usePublicClient,
+  useSwitchChain,
+  useWalletClient,
+} from "wagmi";
 import { WalletContext } from "./WalletContext";
-import type { WalletConnectorName, WalletContextValue, WalletState } from "@/services/blockchain/types";
+import type {
+  WalletConnectorName,
+  WalletContextValue,
+  WalletState,
+} from "@/services/blockchain/types";
 import { ROBINHOOD_CHAIN_INFO } from "@/services/blockchain/constants";
 import { robinhoodChain, wagmiConnectors } from "@/services/blockchain/wagmi";
 
@@ -24,17 +36,28 @@ const initialState: WalletState = {
 const connectorMap: Record<WalletConnectorName, Connector> = {
   MetaMask: wagmiConnectors.MetaMask,
   "Coinbase Wallet": wagmiConnectors.Coinbase,
-  "Browser Wallet": wagmiConnectors.Browser,
+  Rainbow: wagmiConnectors.Rainbow,
   WalletConnect: wagmiConnectors.WalletConnect,
 };
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
-  const { connectAsync, status: connectStatus, error: connectError } = useConnect();
+  const {
+    connectAsync,
+    status: connectStatus,
+    error: connectError,
+  } = useConnect();
   const { disconnectAsync } = useDisconnect();
   const { switchChainAsync } = useSwitchChain();
-  const { address, connector, isConnected, chainId: accountChainId } = useAccount();
+  const {
+    address,
+    connector,
+    isConnected,
+    chainId: accountChainId,
+  } = useAccount();
   const publicClient = usePublicClient({ chainId: robinhoodChain.id });
-  const { data: walletClient } = useWalletClient({ chainId: robinhoodChain.id });
+  const { data: walletClient } = useWalletClient({
+    chainId: robinhoodChain.id,
+  });
   // disable continuous balance polling to avoid excessive RPC calls; refetch on demand
   const { data: balanceData, refetch: refetchBalance } = useBalance({
     address,
@@ -75,7 +98,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     const chainId = accountChainId ? Number(accountChainId) : null;
     const providerName = connector?.name ? String(connector.name) : null;
     const normalizedProviderName =
-      providerName === "MetaMask" || providerName === "Coinbase Wallet" || providerName === "Browser Wallet" || providerName === "WalletConnect"
+      providerName === "MetaMask" ||
+      providerName === "Coinbase Wallet" ||
+      providerName === "Rainbow" ||
+      providerName === "WalletConnect"
         ? (providerName as WalletConnectorName)
         : null;
 
@@ -86,7 +112,11 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       providerName: normalizedProviderName,
       chainId,
       chainName: robinhoodChain.name,
-      status: isConnected ? "connected" : connectStatus === "connecting" ? "connecting" : "idle",
+      status: isConnected
+        ? "connected"
+        : connectStatus === "connecting"
+          ? "connecting"
+          : "idle",
       balance: Number(balanceData?.formatted ?? "0"),
       nativeBalance: balanceData?.formatted ?? "0",
       tokenBalances: {},
@@ -100,7 +130,25 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       switchNetwork,
       refreshBalances,
     };
-  }, [isConnected, address, connector, accountChainId, connectStatus, connectError, balanceData, provider, signer, connect, disconnect, switchNetwork, refreshBalances]);
+  }, [
+    isConnected,
+    address,
+    connector,
+    accountChainId,
+    connectStatus,
+    connectError,
+    balanceData,
+    provider,
+    signer,
+    connect,
+    disconnect,
+    switchNetwork,
+    refreshBalances,
+  ]);
 
-  return <WalletContext.Provider value={contextValue}>{children}</WalletContext.Provider>;
+  return (
+    <WalletContext.Provider value={contextValue}>
+      {children}
+    </WalletContext.Provider>
+  );
 }

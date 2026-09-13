@@ -1,8 +1,10 @@
 import type { PublicClient, WalletClient } from "viem";
 
-export type ConnectionStatus = "idle" | "connecting" | "connected" | "disconnected" | "error";
+export type ConnectionStatus =
+  "idle" | "connecting" | "connected" | "disconnected" | "error";
 
-export type WalletConnectorName = "MetaMask" | "Coinbase Wallet" | "Browser Wallet" | "WalletConnect";
+export type WalletConnectorName =
+  "MetaMask" | "Coinbase Wallet" | "Rainbow" | "WalletConnect";
 
 export interface WalletAccount {
   address: string;
