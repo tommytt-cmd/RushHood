@@ -10,6 +10,7 @@ from app.api.routes.health import router as health_router
 from app.api.routes.wallet import router as wallet_router
 from app.api.routes.profile import router as profile_router
 from app.api.routes.me import router as me_router
+from app.api.routes.stocks import router as stocks_router
 from app.domains.fairness.router import router as fairness_router
 from app.domains.monitoring.router import router as monitoring_router
 from app.infrastructure.observability.logger import configure_logging
@@ -52,6 +53,7 @@ app.include_router(game_router)
 app.include_router(wallet_router)
 app.include_router(profile_router)
 app.include_router(me_router)
+app.include_router(stocks_router)
 app.include_router(fairness_router)
 app.include_router(monitoring_router)
 app.include_router(websocket_router)

@@ -51,6 +51,14 @@ class StockRepository:
         result = await self.session.execute(select(StockToken).where(StockToken.token_address == address.lower()))
         return result.scalar_one_or_none()
 
+    async def list_enabled_tokens(self) -> list[StockToken]:
+        result = await self.session.execute(
+            select(StockToken)
+            .where(StockToken.enabled.is_(True))
+            .order_by(StockToken.symbol.asc(), StockToken.token_address.asc())
+        )
+        return list(result.scalars())
+
     async def get_or_create_token(self, address: str, symbol: str, decimals: int, name: str | None = None) -> StockToken:
         address = address.lower()
         token = await self.get_token(address)
