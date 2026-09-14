@@ -64,11 +64,9 @@ export function BetSlip({
         <div 
           className={cn(
             "clip-tag border p-4 text-left transition-colors",
-            side === s
-              ? s === "under"
+            side === "under"
                 ? "border-rose-400 bg-rose-400/15"
-                : "border-emerald-500 bg-emerald-500/15"
-              : "border-border bg-surface-2/60 hover:border-primary/50",
+                : "border-emerald-500 bg-emerald-500/15",
           )}
         >
           {side}
