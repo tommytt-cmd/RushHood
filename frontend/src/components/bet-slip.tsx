@@ -56,12 +56,25 @@ export function BetSlip({
     <div className="mt-6 rounded-3xl">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="label-tech">Bet slip</p>
-          <p className="mt-1 text-sm text-muted-foreground">Review the transaction before confirming.</p>
+          {/*<p className="label-tech">Bet slip</p>
+          <p className="mt-1 text-sm text-muted-foreground">Review the transaction before confirming.</p>*/}
+          <p className="mt-1 text-sm text-muted-foreground">Side:</p>
         </div>
-        <div className="rounded-full bg-primary/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-primary">
+        <div 
+          className={cn(
+            "clip-tag border p-4 text-left transition-colors",
+            side === s
+              ? s === "under"
+                ? "border-rose-400 bg-rose-400/15"
+                : "border-emerald-500 bg-emerald-500/15"
+              : "border-border bg-surface-2/60 hover:border-primary/50",
+          )}
+        >
           {side}
         </div>
+        {/*<div className="rounded-full bg-primary/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-primary">
+          {side}
+        </div>*/}
       </div>
 
       <div className="mt-5 space-y-4">

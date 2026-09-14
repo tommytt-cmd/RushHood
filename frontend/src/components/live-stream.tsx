@@ -193,7 +193,7 @@ export function LiveStream({
         {/* BETTING: question + threshold */}
         {phase === "betting" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/80 px-6 text-center backdrop-blur-sm">
-            <p className="label-tech text-accent">Betting open</p>
+            {/*<p className="label-tech text-accent">Betting open</p>*/}
             <p className="max-w-md font-display text-lg font-bold uppercase leading-tight sm:text-2xl">
               How many vehicles will be counted?
             </p>

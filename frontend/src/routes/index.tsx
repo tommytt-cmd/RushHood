@@ -105,7 +105,7 @@ function Index() {
               How it works
             </Link>
           </div>
-          <div className="mt-6 max-w-2xl">
+          {/*<div className="mt-6 max-w-2xl">
             <p className="label-tech">Supported stock rewards</p>
             {supportedStocksQuery.isLoading ? (
               <p className="mt-2 text-sm text-muted-foreground">Loading supported stocks…</p>
@@ -126,7 +126,7 @@ function Index() {
                 Supported stock rewards will appear here once they are available.
               </p>
             )}
-          </div>
+          </div>*/}
         </div>
       </section>
 
@@ -159,12 +159,12 @@ function Index() {
               timelineEvents={loop.timelineEvents}
             />
 
-            <div className="mt-3 flex items-start gap-2 max-w-xl text-sm text-muted-foreground">
+            <div className="mt-1 flex items-start gap-2 max-w-xl text-sm text-muted-foreground">
               <AlertTriangle className="h-4 w-4 text-warning mt-0.5" />
               <span>AI counting can be inaccurate on low-light, occluded, or poor-weather footage</span>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-3" />
+            {/*<div className="grid gap-4 sm:grid-cols-3" />*/}
           </div>
 
           <StakePanel
