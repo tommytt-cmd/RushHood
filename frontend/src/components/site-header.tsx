@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Activity, Wallet } from "lucide-react";
+import { Wallet } from "lucide-react";
 
 import { useWallet } from "@/hooks/useWallet";
 import { WalletStatus } from "@/components/wallet-status";
@@ -24,9 +24,13 @@ export function SiteHeader() {
       <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-4 py-3 sm:px-6">
         <div className="flex min-w-0 items-center gap-6">
           <Link to="/" className="flex shrink-0 items-center gap-2">
-            <Activity className="h-5 w-5 text-primary" />
+            <span className="flex h-5 w-5 flex-col items-center justify-center gap-[2px] rounded-full border border-primary/50 bg-surface px-[3px] py-[2px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
+              <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            </span>
             <span className="font-display text-lg font-bold tracking-[0.28em] text-foreground">
-              TRAFFIC
+              Traff<span className="text-primary">IQ</span>
             </span>
           </Link>
           <nav className="hidden items-center gap-6 md:flex">

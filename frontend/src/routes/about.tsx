@@ -7,7 +7,7 @@ import { AlertTriangle } from "lucide-react";
 import { DEFAULT_EXPLORER_URL } from "@/services/blockchain/constants";
 
 const deployedAddresses = [
-  { label: "RUSH token", address: import.meta.env.VITE_RUSH_TOKEN_ADDRESS as string | undefined },
+  { label: "TraffIQ token", address: import.meta.env.VITE_RUSH_TOKEN_ADDRESS as string | undefined },
   { label: "Prediction market", address: import.meta.env.VITE_BETTING_CONTRACT_ADDRESS as string | undefined },
   { label: "Protocol treasury", address: import.meta.env.VITE_RUSH_TREASURY_ADDRESS as string | undefined },
   { label: "Stock treasury", address: import.meta.env.VITE_STOCK_TREASURY_ADDRESS as string | undefined },
@@ -17,7 +17,7 @@ const deployedAddresses = [
 export const Route = createFileRoute("/about")({
   head: () => ({
     meta: [
-      { title: "About TRAFFIC — Vehicle Count Prediction Markets" },
+      { title: "About TRAFFIQ — Vehicle Count Prediction Markets" },
       {
         name: "description",
         content:
@@ -81,9 +81,9 @@ function About() {
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
       <div className="mb-8">
         <p className="label-tech">About</p>
-        <h1 className="mt-3 max-w-3xl text-4xl leading-[0.95] sm:text-5xl">RushHood — TRAFFIC</h1>
+        <h1 className="mt-3 max-w-3xl text-4xl leading-[0.95] sm:text-5xl">TraffIQ</h1>
         <p className="mt-4 max-w-2xl text-sm text-muted-foreground">
-          TRAFFIC is an on-chain under/over vehicle-count prediction market. Each market has a
+          TraffIQ is an on-chain under/over vehicle-count prediction market. Each market has a
           published threshold, a betting deadline, and a final count submitted by the designated
           result publisher. Eligible winning positions share the stock tokens bought for that market
           in proportion to their winning stake.
@@ -93,7 +93,7 @@ function About() {
       <div className="md:flex md:gap-8">
         <aside className="mb-6 md:w-1/4">
           <nav className="sticky top-20 space-y-2">
-            {[
+            {/*[
               ['overview', 'Overview'],
               ['how-it-works', 'How it works'],
               ['utility', 'Tokenomics'],
@@ -102,7 +102,14 @@ function About() {
               ['security', 'Security'],
               ['roadmap', 'Roadmap'],
               ['contribute', 'Contribute'],
-            ].map(([id, label]) => (
+            ]*/}{
+              [
+              ['overview', 'Overview'],
+              ['how-it-works', 'How it works'],
+              ['utility', 'Tokenomics'],
+              ['participate', 'Participate'],
+              ['data-and-settlement', 'Data & settlement'],
+              ].map(([id, label]) => (
               <a
                 key={id}
                 href={`#${id}`}
@@ -172,8 +179,8 @@ function About() {
           <section id="utility">
             <SectionHeading eyebrow="Token" title="Tokenomics" />
             <p>
-              RUSH is the protocol token used by the treasury's buyback mechanism. In this version,
-              RUSH bought with settlement-fee funds is burned. No settlement-fee RUSH is directed
+              TraffIQ is the protocol token used by the treasury's buyback mechanism. In this version,
+              TraffIQ bought with settlement-fee funds is burned. No settlement-fee TraffIQ is directed
               to staking in the current release; a staking allocation is planned for a future
               version. This is not a promise of yield or governance rights.
             </p>
@@ -224,7 +231,7 @@ function About() {
             </p>
           </section>
 
-          <section id="security">
+          {/*<section id="security">
             <SectionHeading eyebrow="Safety" title="Security & audits" />
             <p>
               Key actions are restricted to defined protocol roles: the operator configures markets
@@ -252,7 +259,7 @@ function About() {
               For partnership or operator onboarding, contact the team via the project repository or
               the community channels linked in the footer.
             </p>
-          </section>
+          </section>*/}
         </main>
       </div>
     </div>

@@ -14,13 +14,13 @@ import { useGameLoop } from "@/hooks/useGameLoop";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "TRAFFIC — Live Vehicle Count Under/Over Markets" },
+      { title: "TRAFFIQ — Live Vehicle Count Under/Over Markets" },
       {
         name: "description",
         content:
           "Stake under or over the vehicle threshold on live junction camera counts. Betting, locked, live and settling phases every three minutes.",
       },
-      { property: "og:title", content: "TRAFFIC — Live Vehicle Count Under/Over Markets" },
+      { property: "og:title", content: "TRAFFIQ — Live Vehicle Count Under/Over Markets" },
       {
         property: "og:description",
         content:
@@ -84,7 +84,7 @@ function Index() {
       <section className="relative border-b border-border">
         <div className="relative mx-auto max-w-7xl px-4 pt-8 pb-12 sm:px-6">
           <h1 className="mt-3 max-w-3xl text-4xl leading-[0.95] sm:text-6xl">
-            TRAFFIC — Live vehicle-count prediction markets
+            Traff<span className="text-primary">IQ</span> — Live vehicle-count prediction markets
           </h1>
           <p className="mt-4 max-w-md text-sm text-muted-foreground">
             Place under/over stakes on verified junction vehicle counts. Rounds are settled

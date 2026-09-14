@@ -80,7 +80,19 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   };
 
   const disconnect = async () => {
-    await disconnectAsync();
+    if (!connector || typeof connector.disconnect !== "function") {
+      return;
+    }
+
+    try {
+      await disconnectAsync();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (/disconnect is not a function/i.test(message)) {
+        return;
+      }
+      throw error;
+    }
   };
 
   const switchNetwork = async () => {
