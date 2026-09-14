@@ -253,7 +253,7 @@ export function StakePanel({ roundId, phase, roundNumber, threshold, pool }: Sta
               >
                 <div className="flex items-center gap-2">
                   {s === "under" ? <TrendingDown className="h-4 w-4 text-rose-400" /> : <TrendingUp className="h-4 w-4 text-emerald-500" />}
-                  <span className="font-display text-lg font-bold uppercase">{s}</span>
+                  <span className="font-display text-md font-bold uppercase">{s}</span>
                 </div>
                 {/* pool details intentionally removed to simplify button UI */}
               </button>

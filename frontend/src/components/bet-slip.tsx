@@ -54,29 +54,20 @@ export function BetSlip({
     fetchMinBet();
   }, []);
   return (
-    <div className="mt-6 rounded-3xl">
+    <div className="mt-2 rounded-3xl">
       <div className="flex items-center justify-between gap-3">
         <div>
           {/*<p className="label-tech">Bet slip</p>
           <p className="mt-1 text-sm text-muted-foreground">Review the transaction before confirming.</p>*/}
-          <p className="mt-1 text-sm text-muted-foreground">Side:</p>
+          <p className="mt-1 text-sm text-muted-foreground">Selected Side:</p>
         </div>
-        <div 
-          className={cn(
-            "clip-tag border p-4 text-left transition-colors",
-            side === "under"
-                ? "border-rose-400 bg-rose-400/15"
-                : "border-emerald-500 bg-emerald-500/15",
-          )}
-        >
+        
+        <div className="rounded-full bg-primary/10  px-3 py-1 text-xs uppercase tracking-[0.18em] text-primary">
           {side}
         </div>
-        {/*<div className="rounded-full bg-primary/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-primary">
-          {side}
-        </div>*/}
       </div>
 
-      <div className="mt-5 space-y-4">
+      <div className="mt-2 space-y-4">
         <div className="grid gap-2">
           <label className="label-tech">Amount (ETH)</label>
           <input
