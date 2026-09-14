@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { BrowserProvider, Contract, formatEther } from "ethers";
 import { ArrowDown, ArrowUp, CircleDollarSign, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface BetSlipProps {
   side: "under" | "over";
