@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
+import logging
+from time import sleep
 from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -66,9 +68,55 @@ class StockVaultIndexer:
             )
 
     def _read_events(self, from_block: int, to_block: int) -> list[object]:
+        """Read logs while chunking the block range to avoid provider errors.
+
+        Some RPC providers return internal errors for very large eth_getLogs
+        requests. This helper breaks the full range into manageable windows and
+        retries failed windows with backoff, reducing window size when needed.
+        """
+        logger = logging.getLogger(__name__)
         logs: list[object] = []
-        for event_type in (self.vault.events.StockReceived, self.vault.events.RoundFinalized, self.vault.events.WinnerClaimed):
-            logs.extend(event_type().get_logs(from_block=from_block, to_block=to_block))
+
+        # Choose conservative defaults; tune if your provider supports larger ranges.
+        MAX_CHUNK = 5000
+        MIN_CHUNK = 50
+        MAX_RETRIES = 3
+
+        event_types = (self.vault.events.StockReceived, self.vault.events.RoundFinalized, self.vault.events.WinnerClaimed)
+
+        for event_type in event_types:
+            start = int(from_block)
+            target = int(to_block)
+            chunk = MAX_CHUNK
+            while start <= target:
+                end = min(start + chunk - 1, target)
+                attempt = 0
+                while True:
+                    try:
+                        fetched = event_type().get_logs(from_block=start, to_block=end)
+                        logs.extend(fetched)
+                        break
+                    except Exception as exc:  # pragma: no cover - provider/runtime failures
+                        attempt += 1
+                        logger.warning("get_logs failed for %s:%s-%s (attempt %s): %s", getattr(event_type, '__name__', 'event'), start, end, attempt, exc)
+                        if attempt <= MAX_RETRIES:
+                            # exponential backoff before retrying same window
+                            sleep(0.5 * (2 ** (attempt - 1)))
+                            continue
+                        # If retries exhausted, reduce chunk size and retry the smaller window
+                        if chunk > MIN_CHUNK:
+                            old_chunk = chunk
+                            chunk = max(MIN_CHUNK, chunk // 4)
+                            logger.warning("Reducing chunk size from %s to %s and retrying window %s-%s", old_chunk, chunk, start, end)
+                            # do not advance start/end yet; recalc end with smaller chunk and reset attempts
+                            end = min(start + chunk - 1, target)
+                            attempt = 0
+                            continue
+                        # If we've already reduced to MIN_CHUNK and still failing, raise
+                        logger.exception("Persistent get_logs failure for window %s-%s", start, end)
+                        raise
+                start = end + 1
+
         return sorted(logs, key=lambda item: (item["blockNumber"], item["logIndex"]))
 
     async def _handle_event(self, repository: StockRepository, event: object) -> None:

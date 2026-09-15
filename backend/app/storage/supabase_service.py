@@ -43,7 +43,7 @@ class SupabaseStorageService(StorageService):
         self.client.storage.from_(self.bucket).upload(
             key,
             stream.read(),
-            file_options={"content-type": "image/jpeg"},
+            file_options={"content_type": "image/jpeg"},
         )
         return key
 

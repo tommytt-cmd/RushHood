@@ -77,6 +77,40 @@ class StockRepository:
             await self.session.refresh(token)
         return token
 
+    async def add_or_update_token(self, address: str, symbol: str, decimals: int, name: str | None = None, logo_url: str | None = None, enabled: bool = True) -> StockToken:
+        """Create a new StockToken or update fields on an existing one."""
+        address = address.lower()
+        if logo_url is not None:
+            try:
+                logo_url = str(logo_url)
+            except Exception:
+                # fall back to None if conversion fails
+                logo_url = None
+        token = await self.get_token(address)
+        if token is None:
+            token = StockToken(token_address=address, symbol=symbol, decimals=decimals, name=name, logo_url=logo_url, enabled=enabled)
+            self.session.add(token)
+            try:
+                await self.session.commit()
+            except IntegrityError:
+                await self.session.rollback()
+                token = await self.get_token(address)
+                if token is None:
+                    raise
+            else:
+                await self.session.refresh(token)
+            return token
+
+        # Update existing token fields
+        token.symbol = symbol
+        token.decimals = decimals
+        token.name = name
+        token.logo_url = logo_url
+        token.enabled = enabled
+        await self.session.commit()
+        await self.session.refresh(token)
+        return token
+
     async def get_round_by_number(self, round_number: int) -> Round | None:
         result = await self.session.execute(select(Round).where(Round.round_number == round_number))
         return result.scalar_one_or_none()
