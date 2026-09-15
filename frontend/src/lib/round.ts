@@ -1,10 +1,10 @@
 import type { GamePhase } from "./types";
 
 export const PHASE_DURATIONS: Record<GamePhase, number> = {
-  betting: 60,
+  betting: 180,
   locked: 15,
-  live: 90,
-  settle: 15,
+  live: 30,
+  settle: 30,
 };
 
 export const PHASE_ORDER: GamePhase[] = ["betting", "locked", "live", "settle"];

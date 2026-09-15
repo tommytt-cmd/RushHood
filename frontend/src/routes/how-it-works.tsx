@@ -45,7 +45,7 @@ function HowItWorks() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
       <p className="label-tech">Protocol</p>
-      <h1 className="mt-3 max-w-2xl text-4xl leading-[0.95] sm:text-5xl">How TraffIQ works</h1>
+      <h1 className="mt-3 max-w-2xl text-4xl leading-[0.95] sm:text-5xl">How Traff<span className="text-primary">IQ</span> works</h1>
       <p className="mt-4 max-w-xl text-sm text-muted-foreground">
         Every prediction market asks whether the final vehicle count will finish UNDER or OVER its
         published threshold. The interface shows four operational phases; the protocol enforces the
