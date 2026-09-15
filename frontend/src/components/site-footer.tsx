@@ -7,8 +7,12 @@ export function SiteFooter() {
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-[2fr_1fr_1fr]">
         <div>
           <div className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-primary" />
-            <span className="font-display text-lg font-bold tracking-[0.28em]">TRAFFIC</span>
+            <span className="flex h-5 w-5 flex-col items-center justify-center gap-[2px] rounded-full border border-primary/50 bg-surface px-[3px] py-[2px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
+              <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            </span>
+            <span className="font-display text-lg font-bold tracking-[0.28em]">TRAFF<span className="text-primary">IQ</span></span>
           </div>
           <p className="mt-3 max-w-sm text-sm text-muted-foreground">
             Live vehicle-count prediction market. Stake under or over the threshold, settle on verified

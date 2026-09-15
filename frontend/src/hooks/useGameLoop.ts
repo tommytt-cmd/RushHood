@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { GamePhase, RecentLine, Side } from '../lib/types';
 
 export const GAME_API_BASE = import.meta.env.VITE_GAME_API_URL ?? 'http://localhost:8000';
-console.log(`Using game API base: ${GAME_API_BASE}`);
+//console.log(`Using game API base: ${GAME_API_BASE}`);
 
 interface RoundResponse {
   round: {
@@ -133,7 +133,7 @@ export function useGameLoop(): LoopSnapshot {
         const response = await fetch(`${GAME_API_BASE}/api/game/room`);
         if (!response.ok) throw new Error(`Game API returned ${response.status}`);
         const nextRoom: RoundResponse = await response.json();
-        console.log(nextRoom);
+        // console.log(nextRoom);
         setRoom(nextRoom);
         const nextPhase = mapPhase(nextRoom.status);
         activeRoundIdRef.current = nextRoom.round.id;
@@ -430,8 +430,8 @@ export function useGameLoop(): LoopSnapshot {
   }
     
   //console.log(`Round Number: ${Number(room.round.round_number)}`)
-  console.log(`total: ${totalForPhase}, start_time: ${start_time}, betting_time: ${betting_time}, locked_time: ${locked_time}, live_time: ${live_time}, settle_time: ${settle_time}`);
-  console.log('replay_started', `videoUrl: ${videoUrl}`);
+  // console.log(`total: ${totalForPhase}, start_time: ${start_time}, betting_time: ${betting_time}, locked_time: ${locked_time}, live_time: ${live_time}, settle_time: ${settle_time}`);
+  // console.log('replay_started', `videoUrl: ${videoUrl}`);
   return {
     isLoading: room === null,
     phase,

@@ -10,6 +10,21 @@ import { StakePanel } from "@/components/stake-panel";
 import { JUNCTION } from "@/lib/round";
 import { useGameLoop } from "@/hooks/useGameLoop";
 
+type RobinhoodQuote = {
+  tokenSymbol: string;
+  deployments?: Array<{ contractAddress: string; chainId: number }>;
+  bid?: string;
+  ask?: string;
+  currency?: string;
+  dailyTradingVolume?: string;
+  isTradingHalt?: boolean;
+  generatedAt?: string;
+};
+
+type RobinhoodPriceResponse = {
+  quotes: RobinhoodQuote[];
+};
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -57,6 +72,51 @@ function Index() {
     staleTime: 60_000,
     refetchInterval: 60_000,
   });
+
+  const rhjAssetsQuery = useQuery({
+    queryKey: ["rhj-assets"],
+    queryFn: async () => {
+      const res = await fetch("https://api.robinhood.com/rhj/assets", { cache: "no-store" });
+      if (!res.ok) throw new Error("Unable to load RHJ assets");
+      const j = await res.json();
+      return (j.assets ?? []) as Array<any>;
+    },
+    staleTime: 60_000,
+  });
+
+  const rhjPricesQuery = useQuery({
+    queryKey: ["rhj-prices", supportedStocksQuery.data?.map((s) => s.symbol)],
+    enabled: !!supportedStocksQuery.data && supportedStocksQuery.data.length > 0,
+    queryFn: async () => {
+      const apiBase = import.meta.env["VITE_GAME_API_URL"] ?? "http://localhost:8000";
+      const symbols = (supportedStocksQuery.data ?? []).map((s) => s.symbol);
+      const results = await Promise.all(
+        symbols.map(async (sym) => {
+          const symNorm = sym.trim().toUpperCase();
+          const url = `${apiBase}/api/stocks/prices/${encodeURIComponent(symNorm)}`;
+          try {
+            const res = await fetch(url, { cache: "no-store" });
+            if (!res.ok) {
+              const body = await res.text();
+              // Preserve error details for debugging
+              console.error("Stock price request failed", { symbol: symNorm, status: res.status, body });
+              return { symbol: symNorm, quote: null };
+            }
+            const j = await res.json();
+            const q = j.quotes?.[0] ?? null;
+            return { symbol: symNorm, quote: q };
+          } catch (e) {
+            console.error("Stock price fetch error", { symbol: symNorm, error: String(e) });
+            return { symbol: symNorm, quote: null };
+          }
+        }),
+      );
+      return Object.fromEntries(results.map((r) => [r.symbol, r.quote]));
+    },
+    staleTime: 15_000,
+    refetchInterval: 15_000,
+  });
+
 
   const settledRoundNumberRef = useRef<number | null>(null);
   const previousRoundNumberRef = useRef<number>(loop.roundNumber);
@@ -218,6 +278,89 @@ function Index() {
                     </td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Stock */}
+        <div className="mt-14">
+          <SectionHeading eyebrow="Supported stocks" title="Supported Stock Tokens">
+            Listed stock token assets and live quotes (raw underlying, not multiplier-adjusted).
+          </SectionHeading>
+          <div className="panel mt-6 overflow-x-auto">
+            <table className="w-full min-w-[420px] border-collapse text-left">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="label-tech px-4 py-3">Asset</th>
+                  <th className="label-tech px-2 py-3">Name</th>
+                  <th className="label-tech px-2 py-3">Price</th>
+                  <th className="label-tech px-2 py-3 text-right">View</th>
+                </tr>
+              </thead>
+              <tbody>
+                {supportedStocksQuery.isLoading ? (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                      Loading supported stocks…
+                    </td>
+                  </tr>
+                ) : (supportedStocksQuery.data ?? []).map((stock) => {
+                  // Check if prices are still loading for the first time
+                  const isPricesLoading = rhjPricesQuery.isLoading || (rhjPricesQuery.isFetching && !rhjPricesQuery.data);
+                  const price = rhjPricesQuery.data?.[stock.symbol.toUpperCase()];
+                  const asset = (rhjAssetsQuery.data ?? []).find((a: any) => a.tokenSymbol === stock.symbol);
+                  const logoUrl = stock.address ? `https://cdn.robinhood.com/ncw_assets/logos/${stock.address.toLowerCase()}.png` : undefined;
+
+                  return (
+                    <tr key={stock.address} className="border-b border-border/60 last:border-0">
+                      <td className="px-4 py-3 flex items-center gap-3">
+                        {logoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={logoUrl} alt={stock.symbol} className="h-6 w-6 rounded" />
+                        ) : (
+                          <div className="h-6 w-6 rounded bg-muted" />
+                        )}
+                        <div className="font-mono text-xs">{stock.symbol}</div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground">{stock.name ?? "—"}</td>
+                      <td className="px-4 py-3 font-mono text-sm tabular-nums">$
+                        {isPricesLoading ? (
+                          <span className="text-muted-foreground animate-pulse">Loading…</span>
+                        ) : price ? (
+                          (() => {
+                            const bid = parseFloat(price.bid ?? NaN);
+                            const ask = parseFloat(price.ask ?? NaN);
+                            const mid = Number.isFinite(bid) && Number.isFinite(ask) 
+                              ? ((bid + ask) / 2) 
+                              : Number.isFinite(bid) ? bid : Number.isFinite(ask) ? ask : null;
+                            
+                            return mid !== null 
+                              ? mid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
+                              : "—";
+                          })()
+                        ) : (
+                          <span className="text-destructive">Error</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {stock.address ? (
+                          <a
+                            href={`https://blockscout.com/address/${stock.address}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary underline"
+                          >
+                            View asset 
+                          </a>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+
               </tbody>
             </table>
           </div>
