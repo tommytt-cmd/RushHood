@@ -18,6 +18,24 @@ import type {
 import { ROBINHOOD_CHAIN_INFO } from "@/services/blockchain/constants";
 import { robinhoodChain, wagmiConnectors } from "@/services/blockchain/wagmi";
 
+function normalizeChainId(value: number | string | bigint | null | undefined): number | null {
+  if (value === null || value === undefined || value === "") return null;
+
+  if (typeof value === "bigint") return Number(value);
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  if (trimmed.startsWith("0x") || trimmed.startsWith("0X")) {
+    const parsed = Number.parseInt(trimmed, 16);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 const initialState: WalletState = {
   connected: false,
   address: null,
@@ -96,7 +114,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   };
 
   const switchNetwork = async () => {
-    if (accountChainId === robinhoodChain.id) return;
+    const normalizedAccountChainId = normalizeChainId(accountChainId);
+    if (normalizedAccountChainId === robinhoodChain.id) return;
     await switchChainAsync({ chainId: robinhoodChain.id });
   };
 
@@ -107,7 +126,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   };
 
   const contextValue = useMemo<WalletContextValue>(() => {
-    const chainId = accountChainId ? Number(accountChainId) : null;
+    const chainId = normalizeChainId(accountChainId);
     const providerName = connector?.name ? String(connector.name) : null;
     const normalizedProviderName =
       providerName === "MetaMask" ||
