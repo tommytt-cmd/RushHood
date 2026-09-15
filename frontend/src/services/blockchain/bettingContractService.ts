@@ -534,8 +534,9 @@ export class BettingContractService {
   static async estimatePlaceBet(provider: PublicClient, account: Address, roundNumber: number, side: string, amountWei: bigint) {
     const { address: contractAddress, abi } = getBettingContractConfig();
 
-    // IRushBetting.Side is declared as UNDER = 0, OVER = 1.
-    const normalizedSide = side.toUpperCase() === "OVER" ? 1n : 0n;
+    // IRushBetting.Side enum on-chain: OVER = 0, UNDER = 1.
+    // Map our string side to the on-chain numeric value.
+    const normalizedSide = side.toUpperCase() === "OVER" ? 0n : 1n;
     return provider.estimateContractGas({
       address: contractAddress as Address,
       abi,
@@ -574,7 +575,8 @@ export class BettingContractService {
       throw new Error("Wallet client has no connected account.");
     }
 
-    const normalizedSide = side.toUpperCase() === "OVER" ? 1n : 0n;
+    // On-chain enum: OVER = 0, UNDER = 1. Ensure we encode accordingly.
+    const normalizedSide = side.toUpperCase() === "OVER" ? 0n : 1n;
 
     try {
       const txHash = await signer.writeContract({
