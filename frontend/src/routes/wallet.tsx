@@ -73,8 +73,14 @@ function WalletPage() {
 
   if (!wallet.address) return <DisconnectedWallet />;
 
-  const winningRounds = new Set(rewards.map((reward) => reward.roundNumber.toString()));
-  const wins = bets.filter((bet) => winningRounds.has(bet.roundNumber.toString())).length;
+  const winningSideByRound = new Map(rewards.map((reward) => [reward.roundNumber.toString(), reward.winningSide]));
+  const getBetResult = (bet: Bet) => {
+    const winningSide = winningSideByRound.get(bet.roundNumber.toString());
+    if (!winningSide) return "No stock reward";
+    return winningSide === bet.side ? "Won" : "Lost";
+  };
+
+  const wins = bets.filter((bet) => getBetResult(bet) === "Won").length;
   const totalWagered = bets.reduce((sum, bet) => sum + bet.amount, 0n);
   return <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
     <p className="label-tech">Account</p><h1 className="mt-3 text-4xl leading-[0.95] sm:text-5xl">Wallet</h1>
@@ -86,7 +92,52 @@ function WalletPage() {
     <section className="mt-12"><SectionHeading eyebrow="On-chain rewards" title="Stock rewards">Each reward belongs to its original round and is claimed separately from the StockVault.</SectionHeading>
       {!wallet.isCorrectNetwork ? <Panel className="mt-6"><p className="text-sm text-destructive">Switch to the supported network to view and claim stock rewards.</p></Panel> : loading ? <Panel className="mt-6">Loading reward rounds…</Panel> : error ? <Panel className="mt-6"><p className="text-sm text-destructive">{error}</p><button onClick={() => void refresh()} className="mt-4 text-sm text-primary">Try again</button></Panel> : rewards.length === 0 ? <Panel className="mt-6"><p className="text-sm text-muted-foreground">No eligible stock reward rounds yet. Winning rounds will appear here once the stock reward flow is available.</p></Panel> : <div className="mt-6 grid gap-4 xl:grid-cols-2">{rewards.map((round) => <RewardCard key={round.roundNumber.toString()} round={round} claiming={claiming} claim={claim} />)}</div>}
     </section>
-    <section className="mt-12"><SectionHeading eyebrow="Betting activity" title="Round history">Recent positions from your connected wallet.</SectionHeading><Panel className="mt-6 overflow-x-auto p-0"><table className="w-full min-w-[560px] text-left text-sm"><thead><tr className="border-b border-border"><th className="label-tech px-5 py-4">Round</th><th className="label-tech px-5 py-4">Side</th><th className="label-tech px-5 py-4">Wager</th><th className="label-tech px-5 py-4 text-right">Result</th></tr></thead><tbody>{loading ? <tr><td colSpan={4} className="px-5 py-8 text-center text-muted-foreground">Loading betting history…</td></tr> : bets.length === 0 ? <tr><td colSpan={4} className="px-5 py-8 text-center text-muted-foreground">No bets found for this wallet.</td></tr> : bets.map((bet) => <tr key={bet.roundNumber.toString()} className="border-b border-border/60 last:border-0"><td className="px-5 py-4 font-mono">#{bet.roundNumber.toString()}</td><td className="px-5 py-4">{bet.side}</td><td className="px-5 py-4 font-mono">{amount(bet.amount, 18)} ETH</td><td className="px-5 py-4 text-right"><span className={winningRounds.has(bet.roundNumber.toString()) ? "clip-tag border border-primary/60 bg-primary/10 px-2 py-1 font-mono text-xs text-primary" : "font-mono text-xs text-muted-foreground"}>{winningRounds.has(bet.roundNumber.toString()) ? "Won" : "No stock reward"}</span></td></tr>)}</tbody></table></Panel></section>
+    <section className="mt-12">
+      <SectionHeading eyebrow="Betting activity" title="Round history">Recent positions from your connected wallet.</SectionHeading>
+      <Panel className="mt-6 overflow-x-auto p-0">
+        <table className="w-full min-w-[560px] text-left text-sm">
+          <thead>
+            <tr className="border-b border-border">
+              <th className="label-tech px-5 py-4">Round</th>
+              <th className="label-tech px-5 py-4">Side</th>
+              <th className="label-tech px-5 py-4">Wager</th>
+              <th className="label-tech px-5 py-4 text-right">Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={4} className="px-5 py-8 text-center text-muted-foreground">Loading betting history…</td>
+              </tr>
+            ) : bets.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="px-5 py-8 text-center text-muted-foreground">No bets found for this wallet.</td>
+              </tr>
+            ) : (
+              bets.map((bet) => {
+                const result = getBetResult(bet);
+                return (
+                  <tr key={bet.roundNumber.toString()} className="border-b border-border/60 last:border-0">
+                    <td className="px-5 py-4 font-mono">#{bet.roundNumber.toString()}</td>
+                    <td className="px-5 py-4">{bet.side}</td>
+                    <td className="px-5 py-4 font-mono">{amount(bet.amount, 18)} ETH</td>
+                    <td className="px-5 py-4 text-right">
+                      {result === "Won" ? (
+                        <span className="clip-tag border border-primary/60 bg-primary/10 px-2 py-1 font-mono text-xs text-primary">Won</span>
+                      ) : result === "Lost" ? (
+                        <span className="rounded-2xl bg-rose-50 px-2 py-1 font-mono text-xs text-rose-700">Lost</span>
+                      ) : (
+                        <span className="font-mono text-xs text-muted-foreground">No stock reward</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </Panel>
+    </section>
   </div>;
 }
 
