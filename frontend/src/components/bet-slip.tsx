@@ -62,7 +62,7 @@ export function BetSlip({
           <p className="mt-1 text-sm text-muted-foreground">Selected Side:</p>
         </div>
         
-        <div className="rounded-full bg-primary/10  px-3 py-1 text-xs uppercase tracking-[0.18em] text-primary">
+        <div className="rounded-full bg-primary/10  px-3 pb-1 pt-2 text-xs uppercase tracking-[0.18em] text-primary">
           {side}
         </div>
       </div>

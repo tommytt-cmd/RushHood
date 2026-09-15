@@ -54,10 +54,10 @@ const LiveCounterOverlay = memo(function LiveCounterOverlay({
 
   return (
     <div className="clip-tag absolute right-0 top-0 border border-primary/60 bg-background/75 px-3 py-2 text-right backdrop-blur">
-      <p className="label-tech text-primary">Vehicles</p>
-      <p className={`font-display text-3xl font-bold tabular-nums text-primary sm:text-2xl ${pop ? 'animate-pop-scale' : ''}`}>
+      <p className="label-tech text-primary">Vehicles <span className="font-bold">({count})</span></p>
+      {/*<p className={`font-display text-3xl font-bold tabular-nums text-primary sm:text-2xl ${pop ? 'animate-pop-scale' : ''}`}>
         {count}
-      </p>
+      </p>*/}
     </div>
   );
 });
@@ -153,6 +153,7 @@ export function LiveStream({
           playsInline
           aria-label={locationName}
           preload="auto" // Forces the browser to aggressively cache and buffer ahead
+          controls
           controlsList="nodownload noplaybackrate"
           disablePictureInPicture
           onLoadedMetadata={() => {
